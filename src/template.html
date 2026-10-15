@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compresor de imagini - TekiDeki</title>
+<meta name="description" content="Comprima si redimensioneaza poze direct in browser, in lot, fara sa urci nimic nicaieri. Metadatele EXIF si GPS sunt eliminate.">
+<meta name="author" content="Kristian Mario Miskovic (TekiDeki)">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f4f6f9">
+<link rel="canonical" href="https://tekideki.github.io/Image-Compressor/">
+<link rel="alternate" hreflang="ro" href="https://tekideki.github.io/Image-Compressor/?lang=ro">
+<link rel="alternate" hreflang="en" href="https://tekideki.github.io/Image-Compressor/?lang=en">
+<link rel="alternate" hreflang="sr-Latn" href="https://tekideki.github.io/Image-Compressor/?lang=sr-Latn">
+<link rel="alternate" hreflang="sr-Cyrl" href="https://tekideki.github.io/Image-Compressor/?lang=sr-Cyrl">
+<link rel="alternate" hreflang="x-default" href="https://tekideki.github.io/Image-Compressor/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TekiDeki">
+<meta property="og:title" content="Image Compressor - TekiDeki">
+<meta property="og:description" content="Batch image compression in the browser: nothing is uploaded, EXIF and GPS are stripped, works offline.">
+<meta property="og:url" content="https://tekideki.github.io/Image-Compressor/">
+<meta property="og:image" content="https://tekideki.github.io/Image-Compressor/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Image Compressor - TekiDeki">
+<meta name="twitter:description" content="Batch image compression in the browser: nothing is uploaded, EXIF and GPS are stripped, works offline.">
+<meta name="twitter:image" content="https://tekideki.github.io/Image-Compressor/og-image.png">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./favicon.ico" sizes="any">
+<link rel="icon" href="./icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<script>
+/* Theme and language before the first paint, so nothing flashes. */
+(function () {
+  var dark = null, lang = null;
+  try {
+    var raw = localStorage.getItem('image_compressor_settings_v1');
+    if (raw) { var s = JSON.parse(raw); if (typeof s.dark === 'boolean') dark = s.dark; if (typeof s.lang === 'string') lang = s.lang; }
+  } catch (e) {}
+  if (dark === null && window.matchMedia) dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', dark ? '#0f172a' : '#f4f6f9');
+  if (lang) {
+    var map = { ro: 'ro', en: 'en', 'sr-latn': 'sr-Latn', 'sr-cyrl': 'sr-Cyrl' };
+    if (map[lang]) document.documentElement.lang = map[lang];
+  }
+})();
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"Image Compressor - TekiDeki","url":"https://tekideki.github.io/Image-Compressor/","applicationCategory":"MultimediaApplication","operatingSystem":"Any browser","browserRequirements":"Requires JavaScript","inLanguage":["ro","en","sr-Latn","sr-Cyrl"],"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"license":"https://www.apache.org/licenses/LICENSE-2.0","description":"Batch image compressor, resizer and metadata cleaner that runs entirely in the browser. Nothing is uploaded.","featureList":["Batch compression","Resize by maximum width","JPEG, WebP and PNG output","EXIF, GPS and device metadata removal","ZIP download of the whole batch","Works offline"]}
+</script>
+<style>
+/*__STYLES__*/
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main" data-i18n="skip_to_content">Skip to content</a>
+
+<header class="app-header">
+  <div class="inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="14" rx="2"></rect>
+          <path d="M3 14l5-4 4 3 3-2 6 5"></path>
+          <circle cx="8.5" cy="8.5" r="1.4"></circle>
+          <path d="M8 21h8M12 18v3"></path>
+        </svg>
+      </span>
+      <div class="brand-text">
+        <h1 data-i18n="app_title">Compresor de imagini</h1>
+        <p data-i18n="app_subtitle">Mai mic, aceeasi poza. Nimic nu pleaca din browser.</p>
+      </div>
+    </div>
+    <div class="header-controls">
+      <label class="sr-only" for="langSelect" data-i18n="lang_label">Limba</label>
+      <select id="langSelect" aria-label="Limba">
+        <option value="ro">Romana</option>
+        <option value="en">English</option>
+        <option value="sr-latn">Srpski (latinica)</option>
+        <option value="sr-cyrl">Српски (ћирилица)</option>
+      </select>
+      <button type="button" class="btn-icon" id="themeToggle" aria-pressed="false" aria-label="Tema" title="Tema">🌙</button>
+    </div>
+  </div>
+</header>
+
+<main class="container" id="main" tabindex="-1">
+  <div class="status-banner" id="statusBanner" role="status" hidden>
+    <span class="grow" id="statusText"></span>
+    <span id="statusActions"></span>
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="Sectiuni" data-i18n-aria="tabs_label">
+    <button type="button" role="tab" id="tab-compress" data-tab="compress" aria-controls="panel-compress" aria-selected="true" data-i18n="tab_compress">Compresie</button>
+    <button type="button" role="tab" id="tab-about" data-tab="about" aria-controls="panel-about" aria-selected="false" tabindex="-1" data-i18n="tab_about">Despre</button>
+  </nav>
+
+  <section role="tabpanel" id="panel-compress" aria-labelledby="tab-compress">
+    <div class="card">
+      <div class="drop-zone" id="dropZone">
+        <h2 data-i18n="drop_title">Trage pozele aici</h2>
+        <p data-i18n="drop_hint">Poti alege mai multe fisiere deodata, sau lipi o captura de ecran cu Ctrl+V. Totul se proceseaza local.</p>
+        <button type="button" class="btn-primary" id="chooseImages" data-i18n="choose_images">Alege imagini</button>
+        <p class="small muted" data-i18n="drop_paste_hint">Fisierele nu sunt incarcate nicaieri: raman in memoria acestei pagini pana inchizi fila.</p>
+        <input type="file" id="fileInput" accept="image/*" multiple aria-label="Alege imagini de comprimat" data-i18n-aria="choose_images" hidden>
+      </div>
+      <p class="small muted" id="fileNote" hidden></p>
+    </div>
+
+    <div class="card" id="settingsCard">
+      <div class="card-head">
+        <h2 data-i18n="settings_title">Setari de compresie</h2>
+        <span class="badge badge-info" id="formatBadge" hidden></span>
+      </div>
+      <div class="field">
+        <label for="qualityRange" data-i18n="quality_label">Calitate</label>
+        <div class="slider-row">
+          <input type="range" id="qualityRange" min="40" max="95" step="1" value="78">
+          <output id="qualityOut" for="qualityRange">78%</output>
+        </div>
+        <p class="hint" data-i18n="quality_hint">Calitate mai mica inseamna fisiere mai mici. 70-80 este de obicei invizibil pentru ochi.</p>
+        <p class="hint" id="pngNote" data-i18n="quality_png_note" hidden>PNG nu are control de calitate: se redimensioneaza, dar calitatea nu se aplica.</p>
+      </div>
+      <div class="field">
+        <label for="widthSelect" data-i18n="width_label">Latime maxima</label>
+        <select id="widthSelect">
+          <option value="0" data-i18n="width_original">Pastreaza dimensiunea originala</option>
+          <option value="2560">2560 px</option>
+          <option value="1920">1920 px</option>
+          <option value="1600" selected>1600 px</option>
+          <option value="1280">1280 px</option>
+          <option value="800">800 px</option>
+        </select>
+        <p class="hint" data-i18n="width_hint">Pozele mai mici decat aceasta latime nu sunt marite niciodata.</p>
+      </div>
+      <div class="field">
+        <label for="formatSelect" data-i18n="format_label">Format de iesire</label>
+        <select id="formatSelect">
+          <option value="auto" data-i18n="format_auto">Automat (pastreaza formatul)</option>
+          <option value="jpeg">JPEG</option>
+          <option value="webp">WebP</option>
+          <option value="png">PNG</option>
+        </select>
+        <p class="hint" data-i18n="format_hint">JPEG si WebP sunt cele mai mici pentru fotografii. PNG este potrivit pentru capturi de ecran si pentru transparenta.</p>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn-primary" id="processBtn" data-i18n="process_start">Proceseaza</button>
+        <button type="button" class="btn-ghost" id="cancelBtn" data-i18n="process_cancel" hidden>Anuleaza</button>
+        <button type="button" class="btn-ghost" id="downloadAllBtn" data-i18n="download_all" disabled>Descarca tot (ZIP)</button>
+        <button type="button" class="btn-danger" id="clearListBtn" data-i18n="clear_list" disabled>Goleste lista</button>
+      </div>
+      <div class="progress" id="progressWrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progres" hidden>
+        <span id="progressBar"></span>
+      </div>
+      <p class="small muted" id="progressText" hidden></p>
+      <p class="sr-only" role="status" aria-live="polite" id="progressLive"></p>
+      <div class="summary" id="summary" hidden>
+        <span><span data-i18n="total_label">Total</span>: <strong id="totalFiles">0</strong></span>
+        <span class="big" id="totalBefore">0 B</span>
+        <span aria-hidden="true">→</span>
+        <span class="big" id="totalAfter">0 B</span>
+        <span class="badge badge-pos" id="totalSaved"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2 data-i18n="list_title">Fisiere</h2>
+        <span class="badge" id="listCount" hidden></span>
+      </div>
+      <p class="small" id="staleNote" data-i18n="settings_stale" hidden>Setarile s-au schimbat: apasa Proceseaza pentru rezultate noi.</p>
+      <p class="muted" id="listEmpty" data-i18n="list_empty">Lista este goala.</p>
+      <p class="small muted" id="listEmptyHint" data-i18n="list_empty_hint">Adauga poze mai sus, apoi apasa Proceseaza.</p>
+      <ul class="list" id="fileList"></ul>
+    </div>
+
+    <div class="card" id="previewCard" hidden>
+      <h2 data-i18n="preview_title">Comparatie</h2>
+      <div class="compare">
+        <figure>
+          <div class="frame"><img id="previewOriginal" alt="Original" data-i18n-alt="preview_original_alt"></div>
+          <figcaption><span data-i18n="preview_original">Original</span>: <span id="previewOriginalCaption">-</span></figcaption>
+        </figure>
+        <figure>
+          <div class="frame"><img id="previewCompressed" alt="Compressed" data-i18n-alt="preview_compressed_alt"></div>
+          <figcaption><span data-i18n="preview_compressed">Comprimat</span>: <span id="previewCompressedCaption">-</span></figcaption>
+        </figure>
+      </div>
+      <h3 data-i18n="preview_meta_title">Metadate</h3>
+      <ul class="kv" id="previewMeta"></ul>
+    </div>
+  </section>
+
+  <section role="tabpanel" id="panel-about" aria-labelledby="tab-about" hidden>
+    <div class="card">
+      <h2 data-i18n="about_what">Ce face aplicatia</h2>
+      <p data-i18n="about_what_text"></p>
+      <h2 data-i18n="about_privacy">Confidentialitate</h2>
+      <p data-i18n="about_privacy_text"></p>
+      <h2 data-i18n="about_metadata">Metadate eliminate</h2>
+      <p data-i18n="about_metadata_text"></p>
+      <h2 data-i18n="about_formats">Formate si limite</h2>
+      <ul class="about-list">
+        <li data-i18n="about_formats_1"></li>
+        <li data-i18n="about_formats_2"></li>
+        <li data-i18n="about_formats_3"></li>
+        <li data-i18n="about_formats_4"></li>
+      </ul>
+      <h2 data-i18n="about_install">Instalare</h2>
+      <p data-i18n="about_install_text"></p>
+      <p><button type="button" class="btn-ghost" id="installBtn" data-i18n="install_button">Instaleaza aplicatia</button></p>
+      <h2 data-i18n="about_shortcuts">Scurtaturi</h2>
+      <p data-i18n="about_shortcuts_text"></p>
+      <p class="small muted"><span class="kbd">Space</span> · <span class="kbd">Ctrl</span>+<span class="kbd">V</span> · <span class="kbd">1</span> <span class="kbd">2</span></p>
+      <h2 data-i18n="about_license">Licenta</h2>
+      <p data-i18n="about_license_text"></p>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="storage_title">Setari si date locale</h2>
+      <p data-i18n="storage_text"></p>
+      <p><button type="button" class="btn-ghost" id="resetSettings" data-i18n="action_reset_settings">Reseteaza setarile</button></p>
+    </div>
+
+    <div class="card donate-card">
+      <p data-i18n="donate_text">Ti-a fost de folos? Poti sustine proiectul.</p>
+      <p><a class="button" href="https://paypal.me/TekiDeki" target="_blank" rel="noopener noreferrer" data-i18n="donate_button">Sustine proiectul</a></p>
+      <p class="small muted" data-i18n="donate_note">Fara cont, fara reclame, fara urmarire.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="app-footer">
+  <p class="notice" data-i18n="disclaimer"></p>
+  <p class="attribution small">
+    <span data-i18n="footer_attr_label">Fara biblioteci externe</span>:
+    <span data-i18n="footer_attr_text"></span>
+  </p>
+  <div class="tekideki-credits">
+    <span>© 2026 <a href="https://github.com/TekiDeki" target="_blank" rel="noopener noreferrer">TekiDeki</a></span>
+    <span aria-hidden="true">·</span>
+    <a href="https://github.com/TekiDeki/Image-Compressor" target="_blank" rel="noopener noreferrer" data-i18n="footer_source">Source code</a>
+    <span aria-hidden="true">·</span>
+    <a href="https://tekideki.github.io/Image-Compressor/LICENSE" target="_blank" rel="noopener noreferrer" data-i18n="footer_license">Apache-2.0</a>
+  </div>
+</footer>
+
+<dialog id="appDialog" aria-labelledby="appDialogTitle">
+  <h2 id="appDialogTitle"></h2>
+  <p id="appDialogBody"></p>
+  <div class="dialog-actions">
+    <button type="button" class="btn-ghost" id="appDialogCancel" data-i18n="cancel">Anuleaza</button>
+    <button type="button" class="btn-primary" id="appDialogConfirm" data-i18n="confirm">Confirma</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+/*__I18N__*/
+/*__APP__*/
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+Image Compressor
+Copyright 2026 Kristian Mario Miskovic (TekiDeki)
+https://github.com/TekiDeki/Image-Compressor
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+--------------------------------------------------------------------------
+Third-party software
+--------------------------------------------------------------------------
+
+None. The application is a single HTML file built from the sources in this
+repository: HTML and CSS written for this project, a translation table with
+four locales, and about 800 lines of plain JavaScript. It bundles no library,
+no framework, no analytics and no font file, and it loads nothing from the
+network at runtime - not even a CDN copy of anything.
+
+The ZIP writer (store-only, CRC-32, local headers, central directory and end
+of central directory record) is implemented in this project from the public
+ZIP file format description. It does not include code from Info-ZIP, zlib,
+JSZip or any other ZIP implementation.
+
+--------------------------------------------------------------------------
+External services
+--------------------------------------------------------------------------
+
+None. Images are decoded, resized and re-encoded inside the browser, and the
+result is handed to the download manager of the browser. No image, no
+filename and no metadata ever leaves the device, which also means the app has
+no server-side limits: the only limits are the memory of the browser and the
+format support of its own codecs.

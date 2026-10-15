@@ -1,0 +1,88 @@
+{
+  "id": "./",
+  "name": "Image Compressor · TekiDeki",
+  "short_name": "Compressor",
+  "description": "Batch image compression, resizing and metadata cleaning in the browser. Nothing is uploaded, EXIF and GPS are stripped, works offline.",
+  "lang": "ro",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#f4f6f9",
+  "theme_color": "#2563eb",
+  "categories": [
+    "utilities",
+    "productivity",
+    "photo"
+  ],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Compresie",
+      "short_name": "Compresie",
+      "url": "./?tab=compress",
+      "icons": [
+        {
+          "src": "./icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Despre aplicatie",
+      "short_name": "Despre",
+      "url": "./?tab=about",
+      "icons": [
+        {
+          "src": "./icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "./screenshots/screenshot-narrow.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Lot de imagini comprimat pe telefon, cu economie pe fiecare fisier"
+    },
+    {
+      "src": "./screenshots/screenshot-wide.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Comparatie original si rezultat pe desktop, cu metadatele detectate"
+    }
+  ]
+}

@@ -1,0 +1,2102 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compresor de imagini - TekiDeki</title>
+<meta name="description" content="Comprima si redimensioneaza poze direct in browser, in lot, fara sa urci nimic nicaieri. Metadatele EXIF si GPS sunt eliminate.">
+<meta name="author" content="Kristian Mario Miskovic (TekiDeki)">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f4f6f9">
+<link rel="canonical" href="https://tekideki.github.io/Image-Compressor/">
+<link rel="alternate" hreflang="ro" href="https://tekideki.github.io/Image-Compressor/?lang=ro">
+<link rel="alternate" hreflang="en" href="https://tekideki.github.io/Image-Compressor/?lang=en">
+<link rel="alternate" hreflang="sr-Latn" href="https://tekideki.github.io/Image-Compressor/?lang=sr-Latn">
+<link rel="alternate" hreflang="sr-Cyrl" href="https://tekideki.github.io/Image-Compressor/?lang=sr-Cyrl">
+<link rel="alternate" hreflang="x-default" href="https://tekideki.github.io/Image-Compressor/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TekiDeki">
+<meta property="og:title" content="Image Compressor - TekiDeki">
+<meta property="og:description" content="Batch image compression in the browser: nothing is uploaded, EXIF and GPS are stripped, works offline.">
+<meta property="og:url" content="https://tekideki.github.io/Image-Compressor/">
+<meta property="og:image" content="https://tekideki.github.io/Image-Compressor/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Image Compressor - TekiDeki">
+<meta name="twitter:description" content="Batch image compression in the browser: nothing is uploaded, EXIF and GPS are stripped, works offline.">
+<meta name="twitter:image" content="https://tekideki.github.io/Image-Compressor/og-image.png">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./favicon.ico" sizes="any">
+<link rel="icon" href="./icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<script>
+/* Theme and language before the first paint, so nothing flashes. */
+(function () {
+  var dark = null, lang = null;
+  try {
+    var raw = localStorage.getItem('image_compressor_settings_v1');
+    if (raw) { var s = JSON.parse(raw); if (typeof s.dark === 'boolean') dark = s.dark; if (typeof s.lang === 'string') lang = s.lang; }
+  } catch (e) {}
+  if (dark === null && window.matchMedia) dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', dark ? '#0f172a' : '#f4f6f9');
+  if (lang) {
+    var map = { ro: 'ro', en: 'en', 'sr-latn': 'sr-Latn', 'sr-cyrl': 'sr-Cyrl' };
+    if (map[lang]) document.documentElement.lang = map[lang];
+  }
+})();
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"Image Compressor - TekiDeki","url":"https://tekideki.github.io/Image-Compressor/","applicationCategory":"MultimediaApplication","operatingSystem":"Any browser","browserRequirements":"Requires JavaScript","inLanguage":["ro","en","sr-Latn","sr-Cyrl"],"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"license":"https://www.apache.org/licenses/LICENSE-2.0","description":"Batch image compressor, resizer and metadata cleaner that runs entirely in the browser. Nothing is uploaded.","featureList":["Batch compression","Resize by maximum width","JPEG, WebP and PNG output","EXIF, GPS and device metadata removal","ZIP download of the whole batch","Works offline"]}
+</script>
+<style>
+/* Image Compressor · TekiDeki - single-file application styles
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright 2026 Kristian Mario Miskovic (TekiDeki)
+ * Palette values are chosen so that every text/background pair passes WCAG AA
+ * in both themes (verified with axe-core in the test suite).
+ */
+
+/* hidden must win over component display rules (buttons are flex/inline-flex) */
+[hidden] { display: none !important; }
+
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #dbeafe;
+  --accent-ink: #1e40af;
+  --link: #2563eb;
+  --link-hover: #1d4ed8;
+  --bg: #f4f6f9;
+  --bg-soft: #e8edf4;
+  --card-bg: #ffffff;
+  --text: #131a24;
+  --text-soft: #48546a;
+  --text-muted: #5f6b7d;
+  --border: #dde3ec;
+  --border-strong: #c3ccdb;
+  --secondary: #e9edf3;
+  --secondary-text: #1f2937;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-bg: #fee2e2;
+  --danger-text: #7f1d1d;
+  --danger-border: #fca5a5;
+  --pos: #15803d;
+  --pos-bg: #dcfce7;
+  --pos-border: #86efac;
+  --warn: #92400e;
+  --warn-bg: #fef3c7;
+  --warn-border: #fcd34d;
+  --info-bg: #eef2ff;
+  --info-text: #3730a3;
+  --info-border: #c7d2fe;
+  --tag-bg: #eef1f6;
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 10px 30px rgba(15, 23, 42, 0.08);
+  --radius: 14px;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --primary: #2f6fe4;
+  --primary-hover: #285fcc;
+  --primary-soft: #1e3a8a;
+  --accent-ink: #dbeafe;
+  --link: #8ab4f8;
+  --link-hover: #a5c8ff;
+  --bg: #0f172a;
+  --bg-soft: #131f36;
+  --card-bg: #18213a;
+  --text: #e9eef7;
+  --text-soft: #b6c1d6;
+  --text-muted: #97a3b8;
+  --border: #27324e;
+  --border-strong: #3a4767;
+  --secondary: #24304c;
+  --secondary-text: #e9eef7;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-bg: #4c1d1d;
+  --danger-text: #fecaca;
+  --danger-border: #7f1d1d;
+  --pos: #4ade80;
+  --pos-bg: #14351f;
+  --pos-border: #15803d;
+  --warn: #fde68a;
+  --warn-bg: #453208;
+  --warn-border: #a16207;
+  --info-bg: #24304c;
+  --info-text: #c7d2fe;
+  --info-border: #4f46e5;
+  --tag-bg: #23304d;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
+}
+
+h1, h2, h3 { line-height: 1.25; margin: 0 0 10px; }
+h1 { font-size: clamp(20px, 3.4vw, 27px); }
+h2 { font-size: 18px; }
+h3 { font-size: 16px; }
+p { margin: 0 0 10px; }
+a { color: var(--link); }
+a:hover { color: var(--link-hover); }
+img { max-width: 100%; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 60;
+  background: var(--primary); color: #fff; padding: 10px 16px;
+  border-radius: 0 0 10px 0; font-weight: 600;
+}
+.skip-link:focus { left: 0; }
+:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+.app-header {
+  position: sticky; top: 0; z-index: 40;
+  background: color-mix(in srgb, var(--card-bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.app-header .inner {
+  max-width: 1120px; margin: 0 auto; padding: 12px 16px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: 12px; margin-right: auto; }
+.brand-mark {
+  width: 44px; height: 44px; border-radius: 12px; flex: 0 0 auto;
+  background: linear-gradient(180deg, var(--primary), var(--primary-hover));
+  display: grid; place-items: center; color: #fff;
+}
+.brand-text p { margin: 0; font-size: 12.5px; color: var(--text-muted); }
+.header-controls { display: flex; align-items: center; gap: 8px; }
+
+.container { max-width: 1120px; margin: 0 auto; padding: 20px 16px 40px; }
+
+.tabs {
+  display: flex; gap: 6px; padding: 6px; margin: 0 0 18px;
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 999px; box-shadow: var(--shadow);
+}
+.tabs button {
+  flex: 1; border: 0; background: transparent; color: var(--text-soft);
+  font: inherit; font-weight: 600; padding: 10px 12px; border-radius: 999px; cursor: pointer;
+}
+.tabs button[aria-selected="true"] { background: var(--primary); color: #fff; }
+
+.card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 18px; margin-bottom: 16px;
+}
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.grid-2 { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 900px) {
+  .grid-2 { grid-template-columns: 1.15fr 1fr; align-items: start; }
+}
+
+.btn-primary, .btn-ghost, .btn-danger, .btn-icon, .button {
+  font: inherit; font-weight: 600; border-radius: 10px; cursor: pointer;
+  padding: 10px 16px; border: 1px solid transparent; display: inline-flex;
+  align-items: center; justify-content: center; gap: 8px; text-decoration: none;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-ghost { background: var(--secondary); color: var(--secondary-text); border-color: var(--border); }
+.btn-ghost:hover { border-color: var(--border-strong); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: var(--danger-hover); }
+.btn-icon {
+  background: var(--secondary); color: var(--secondary-text); border-color: var(--border);
+  padding: 9px 12px; font-size: 17px; line-height: 1;
+}
+.btn-icon[aria-pressed="true"] { background: var(--primary); color: #fff; }
+.btn-sm { padding: 7px 11px; font-size: 13.5px; border-radius: 9px; }
+.btn-primary[disabled], .btn-ghost[disabled], .btn-danger[disabled], .btn-icon[disabled], .button[disabled] {
+  opacity: 0.55; cursor: not-allowed;
+}
+.btn-primary:not([disabled]):hover, .btn-ghost:not([disabled]):hover { filter: none; }
+
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.drop-zone {
+  border: 2px dashed var(--border-strong); border-radius: var(--radius);
+  background: var(--bg-soft); padding: 26px 18px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.drop-zone.dragover { border-color: var(--primary); background: var(--primary-soft); }
+.drop-zone h2 { margin: 0; }
+.drop-zone p { margin: 0; color: var(--text-soft); max-width: 46ch; }
+
+.field { margin-bottom: 14px; }
+.field > label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.field .hint { color: var(--text-muted); font-size: 13px; margin: 2px 0 0; }
+select, input[type="number"], input[type="text"] {
+  font: inherit; padding: 9px 11px; border-radius: 10px;
+  border: 1px solid var(--border-strong); background: var(--card-bg); color: var(--text);
+  max-width: 100%;
+}
+select { min-width: 150px; }
+
+.slider-row { display: flex; align-items: center; gap: 12px; }
+input[type="range"] { flex: 1; accent-color: var(--primary); min-width: 120px; }
+.slider-row output {
+  font-variant-numeric: tabular-nums; font-weight: 700; min-width: 46px; text-align: right;
+}
+
+.switch-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 10px 0; border-top: 1px solid var(--border); }
+.switch-row:first-of-type { border-top: 0; }
+.switch-row .hint { color: var(--text-muted); font-size: 13px; margin: 2px 0 0; }
+input.switch {
+  appearance: none; width: 46px; height: 26px; border-radius: 999px; flex: 0 0 auto;
+  background: var(--border-strong); position: relative; cursor: pointer; transition: background 0.15s ease;
+}
+input.switch::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+  border-radius: 50%; background: #fff; transition: transform 0.15s ease;
+}
+input.switch:checked { background: var(--primary); }
+input.switch:checked::after { transform: translateX(20px); }
+
+.progress {
+  height: 10px; border-radius: 999px; background: var(--bg-soft);
+  border: 1px solid var(--border); overflow: hidden; margin: 10px 0 6px;
+}
+.progress > span { display: block; height: 100%; width: 0; background: var(--primary); transition: width 0.2s ease; }
+
+.summary {
+  display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline;
+  padding: 12px 14px; border-radius: 12px; background: var(--bg-soft); border: 1px solid var(--border);
+}
+.summary .big { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.summary .pos { color: var(--pos); }
+.summary .neg { color: var(--danger-text); }
+
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.list-item {
+  display: grid; gap: 10px; padding: 12px; border: 1px solid var(--border);
+  border-radius: 12px; background: var(--bg-soft);
+}
+@media (min-width: 700px) {
+  .list-item { grid-template-columns: 1fr auto; align-items: center; }
+}
+.list-main { min-width: 0; }
+.list-name { font-weight: 600; overflow-wrap: anywhere; }
+.list-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.list-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.list-item.is-selected { border-color: var(--primary); }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600;
+  padding: 3px 9px; border-radius: 999px; background: var(--tag-bg); color: var(--text-soft);
+  border: 1px solid var(--border);
+}
+.badge-pos { background: var(--pos-bg); color: var(--pos); border-color: var(--pos-border); }
+.badge-warn { background: var(--warn-bg); color: var(--warn); border-color: var(--warn-border); }
+.badge-danger { background: var(--danger-bg); color: var(--danger-text); border-color: var(--danger-border); }
+.badge-info { background: var(--info-bg); color: var(--info-text); border-color: var(--info-border); }
+.badge-type { background: var(--primary-soft); color: var(--accent-ink); border-color: transparent; }
+
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; overflow-wrap: anywhere; }
+.muted { color: var(--text-muted); }
+.small { font-size: 13px; }
+
+.compare { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 760px) { .compare { grid-template-columns: 1fr 1fr; } }
+.compare figure { margin: 0; }
+.compare .frame {
+  border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  background: repeating-conic-gradient(var(--bg-soft) 0% 25%, var(--card-bg) 0% 50%) 50% / 20px 20px;
+  display: grid; place-items: center; min-height: 140px; padding: 6px;
+}
+.compare img { display: block; max-height: 320px; width: auto; }
+.compare figcaption { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+
+.kv { display: grid; gap: 4px; margin: 0 0 10px; padding-left: 18px; }
+.kv li { overflow-wrap: anywhere; font-size: 14.5px; }
+.kv li.small { font-size: 13px; }
+
+.status-banner {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  padding: 12px 14px; border-radius: 12px; margin-bottom: 14px;
+  background: var(--info-bg); color: var(--info-text); border: 1px solid var(--info-border);
+}
+.status-banner.danger { background: var(--danger-bg); color: var(--danger-text); border-color: var(--danger-border); }
+.status-banner.warn { background: var(--warn-bg); color: var(--warn); border-color: var(--warn-border); }
+.status-banner.info { background: var(--info-bg); color: var(--info-text); border-color: var(--info-border); }
+.status-banner[hidden] { display: none; }
+.status-banner .grow { flex: 1 1 260px; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(12px);
+  background: var(--text); color: var(--bg); padding: 11px 18px; border-radius: 999px;
+  box-shadow: var(--shadow); z-index: 70; opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease;
+  max-width: min(92vw, 520px); text-align: center;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast[hidden] { display: none; }
+
+dialog#appDialog {
+  position: fixed; inset: 0; margin: auto; width: min(92vw, 460px); height: fit-content;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--card-bg);
+  color: var(--text); box-shadow: var(--shadow); padding: 20px;
+}
+dialog#appDialog::backdrop { background: rgba(15, 23, 42, 0.55); }
+dialog#appDialog h2 { margin-top: 0; }
+dialog#appDialog p { color: var(--text-soft); font-size: 14px; }
+.dialog-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 6px; }
+
+.about-list { margin: 0 0 12px; padding-left: 20px; color: var(--text-soft); }
+.about-list li { margin-bottom: 4px; }
+.kbd {
+  display: inline-block; padding: 1px 7px; border-radius: 6px; border: 1px solid var(--border-strong);
+  background: var(--bg-soft); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px;
+}
+
+.donate-card { text-align: center; }
+.donate-card .button { background: var(--primary); color: #fff; }
+
+.app-footer {
+  max-width: 1120px; margin: 0 auto; padding: 22px 16px 34px;
+  color: var(--text-muted); font-size: 13px; text-align: center;
+}
+.app-footer .notice { margin-bottom: 10px; }
+.app-footer .attribution { margin-bottom: 10px; }
+.tekideki-credits { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+.tekideki-credits a { color: var(--text-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main" data-i18n="skip_to_content">Skip to content</a>
+
+<header class="app-header">
+  <div class="inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="14" rx="2"></rect>
+          <path d="M3 14l5-4 4 3 3-2 6 5"></path>
+          <circle cx="8.5" cy="8.5" r="1.4"></circle>
+          <path d="M8 21h8M12 18v3"></path>
+        </svg>
+      </span>
+      <div class="brand-text">
+        <h1 data-i18n="app_title">Compresor de imagini</h1>
+        <p data-i18n="app_subtitle">Mai mic, aceeasi poza. Nimic nu pleaca din browser.</p>
+      </div>
+    </div>
+    <div class="header-controls">
+      <label class="sr-only" for="langSelect" data-i18n="lang_label">Limba</label>
+      <select id="langSelect" aria-label="Limba">
+        <option value="ro">Romana</option>
+        <option value="en">English</option>
+        <option value="sr-latn">Srpski (latinica)</option>
+        <option value="sr-cyrl">Српски (ћирилица)</option>
+      </select>
+      <button type="button" class="btn-icon" id="themeToggle" aria-pressed="false" aria-label="Tema" title="Tema">🌙</button>
+    </div>
+  </div>
+</header>
+
+<main class="container" id="main" tabindex="-1">
+  <div class="status-banner" id="statusBanner" role="status" hidden>
+    <span class="grow" id="statusText"></span>
+    <span id="statusActions"></span>
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="Sectiuni" data-i18n-aria="tabs_label">
+    <button type="button" role="tab" id="tab-compress" data-tab="compress" aria-controls="panel-compress" aria-selected="true" data-i18n="tab_compress">Compresie</button>
+    <button type="button" role="tab" id="tab-about" data-tab="about" aria-controls="panel-about" aria-selected="false" tabindex="-1" data-i18n="tab_about">Despre</button>
+  </nav>
+
+  <section role="tabpanel" id="panel-compress" aria-labelledby="tab-compress">
+    <div class="card">
+      <div class="drop-zone" id="dropZone">
+        <h2 data-i18n="drop_title">Trage pozele aici</h2>
+        <p data-i18n="drop_hint">Poti alege mai multe fisiere deodata, sau lipi o captura de ecran cu Ctrl+V. Totul se proceseaza local.</p>
+        <button type="button" class="btn-primary" id="chooseImages" data-i18n="choose_images">Alege imagini</button>
+        <p class="small muted" data-i18n="drop_paste_hint">Fisierele nu sunt incarcate nicaieri: raman in memoria acestei pagini pana inchizi fila.</p>
+        <input type="file" id="fileInput" accept="image/*" multiple aria-label="Alege imagini de comprimat" data-i18n-aria="choose_images" hidden>
+      </div>
+      <p class="small muted" id="fileNote" hidden></p>
+    </div>
+
+    <div class="card" id="settingsCard">
+      <div class="card-head">
+        <h2 data-i18n="settings_title">Setari de compresie</h2>
+        <span class="badge badge-info" id="formatBadge" hidden></span>
+      </div>
+      <div class="field">
+        <label for="qualityRange" data-i18n="quality_label">Calitate</label>
+        <div class="slider-row">
+          <input type="range" id="qualityRange" min="40" max="95" step="1" value="78">
+          <output id="qualityOut" for="qualityRange">78%</output>
+        </div>
+        <p class="hint" data-i18n="quality_hint">Calitate mai mica inseamna fisiere mai mici. 70-80 este de obicei invizibil pentru ochi.</p>
+        <p class="hint" id="pngNote" data-i18n="quality_png_note" hidden>PNG nu are control de calitate: se redimensioneaza, dar calitatea nu se aplica.</p>
+      </div>
+      <div class="field">
+        <label for="widthSelect" data-i18n="width_label">Latime maxima</label>
+        <select id="widthSelect">
+          <option value="0" data-i18n="width_original">Pastreaza dimensiunea originala</option>
+          <option value="2560">2560 px</option>
+          <option value="1920">1920 px</option>
+          <option value="1600" selected>1600 px</option>
+          <option value="1280">1280 px</option>
+          <option value="800">800 px</option>
+        </select>
+        <p class="hint" data-i18n="width_hint">Pozele mai mici decat aceasta latime nu sunt marite niciodata.</p>
+      </div>
+      <div class="field">
+        <label for="formatSelect" data-i18n="format_label">Format de iesire</label>
+        <select id="formatSelect">
+          <option value="auto" data-i18n="format_auto">Automat (pastreaza formatul)</option>
+          <option value="jpeg">JPEG</option>
+          <option value="webp">WebP</option>
+          <option value="png">PNG</option>
+        </select>
+        <p class="hint" data-i18n="format_hint">JPEG si WebP sunt cele mai mici pentru fotografii. PNG este potrivit pentru capturi de ecran si pentru transparenta.</p>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn-primary" id="processBtn" data-i18n="process_start">Proceseaza</button>
+        <button type="button" class="btn-ghost" id="cancelBtn" data-i18n="process_cancel" hidden>Anuleaza</button>
+        <button type="button" class="btn-ghost" id="downloadAllBtn" data-i18n="download_all" disabled>Descarca tot (ZIP)</button>
+        <button type="button" class="btn-danger" id="clearListBtn" data-i18n="clear_list" disabled>Goleste lista</button>
+      </div>
+      <div class="progress" id="progressWrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progres" hidden>
+        <span id="progressBar"></span>
+      </div>
+      <p class="small muted" id="progressText" hidden></p>
+      <p class="sr-only" role="status" aria-live="polite" id="progressLive"></p>
+      <div class="summary" id="summary" hidden>
+        <span><span data-i18n="total_label">Total</span>: <strong id="totalFiles">0</strong></span>
+        <span class="big" id="totalBefore">0 B</span>
+        <span aria-hidden="true">→</span>
+        <span class="big" id="totalAfter">0 B</span>
+        <span class="badge badge-pos" id="totalSaved"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2 data-i18n="list_title">Fisiere</h2>
+        <span class="badge" id="listCount" hidden></span>
+      </div>
+      <p class="small" id="staleNote" data-i18n="settings_stale" hidden>Setarile s-au schimbat: apasa Proceseaza pentru rezultate noi.</p>
+      <p class="muted" id="listEmpty" data-i18n="list_empty">Lista este goala.</p>
+      <p class="small muted" id="listEmptyHint" data-i18n="list_empty_hint">Adauga poze mai sus, apoi apasa Proceseaza.</p>
+      <ul class="list" id="fileList"></ul>
+    </div>
+
+    <div class="card" id="previewCard" hidden>
+      <h2 data-i18n="preview_title">Comparatie</h2>
+      <div class="compare">
+        <figure>
+          <div class="frame"><img id="previewOriginal" alt="Original" data-i18n-alt="preview_original_alt"></div>
+          <figcaption><span data-i18n="preview_original">Original</span>: <span id="previewOriginalCaption">-</span></figcaption>
+        </figure>
+        <figure>
+          <div class="frame"><img id="previewCompressed" alt="Compressed" data-i18n-alt="preview_compressed_alt"></div>
+          <figcaption><span data-i18n="preview_compressed">Comprimat</span>: <span id="previewCompressedCaption">-</span></figcaption>
+        </figure>
+      </div>
+      <h3 data-i18n="preview_meta_title">Metadate</h3>
+      <ul class="kv" id="previewMeta"></ul>
+    </div>
+  </section>
+
+  <section role="tabpanel" id="panel-about" aria-labelledby="tab-about" hidden>
+    <div class="card">
+      <h2 data-i18n="about_what">Ce face aplicatia</h2>
+      <p data-i18n="about_what_text"></p>
+      <h2 data-i18n="about_privacy">Confidentialitate</h2>
+      <p data-i18n="about_privacy_text"></p>
+      <h2 data-i18n="about_metadata">Metadate eliminate</h2>
+      <p data-i18n="about_metadata_text"></p>
+      <h2 data-i18n="about_formats">Formate si limite</h2>
+      <ul class="about-list">
+        <li data-i18n="about_formats_1"></li>
+        <li data-i18n="about_formats_2"></li>
+        <li data-i18n="about_formats_3"></li>
+        <li data-i18n="about_formats_4"></li>
+      </ul>
+      <h2 data-i18n="about_install">Instalare</h2>
+      <p data-i18n="about_install_text"></p>
+      <p><button type="button" class="btn-ghost" id="installBtn" data-i18n="install_button">Instaleaza aplicatia</button></p>
+      <h2 data-i18n="about_shortcuts">Scurtaturi</h2>
+      <p data-i18n="about_shortcuts_text"></p>
+      <p class="small muted"><span class="kbd">Space</span> · <span class="kbd">Ctrl</span>+<span class="kbd">V</span> · <span class="kbd">1</span> <span class="kbd">2</span></p>
+      <h2 data-i18n="about_license">Licenta</h2>
+      <p data-i18n="about_license_text"></p>
+    </div>
+
+    <div class="card">
+      <h2 data-i18n="storage_title">Setari si date locale</h2>
+      <p data-i18n="storage_text"></p>
+      <p><button type="button" class="btn-ghost" id="resetSettings" data-i18n="action_reset_settings">Reseteaza setarile</button></p>
+    </div>
+
+    <div class="card donate-card">
+      <p data-i18n="donate_text">Ti-a fost de folos? Poti sustine proiectul.</p>
+      <p><a class="button" href="https://paypal.me/TekiDeki" target="_blank" rel="noopener noreferrer" data-i18n="donate_button">Sustine proiectul</a></p>
+      <p class="small muted" data-i18n="donate_note">Fara cont, fara reclame, fara urmarire.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="app-footer">
+  <p class="notice" data-i18n="disclaimer"></p>
+  <p class="attribution small">
+    <span data-i18n="footer_attr_label">Fara biblioteci externe</span>:
+    <span data-i18n="footer_attr_text"></span>
+  </p>
+  <div class="tekideki-credits">
+    <span>© 2026 <a href="https://github.com/TekiDeki" target="_blank" rel="noopener noreferrer">TekiDeki</a></span>
+    <span aria-hidden="true">·</span>
+    <a href="https://github.com/TekiDeki/Image-Compressor" target="_blank" rel="noopener noreferrer" data-i18n="footer_source">Source code</a>
+    <span aria-hidden="true">·</span>
+    <a href="https://tekideki.github.io/Image-Compressor/LICENSE" target="_blank" rel="noopener noreferrer" data-i18n="footer_license">Apache-2.0</a>
+  </div>
+</footer>
+
+<dialog id="appDialog" aria-labelledby="appDialogTitle">
+  <h2 id="appDialogTitle"></h2>
+  <p id="appDialogBody"></p>
+  <div class="dialog-actions">
+    <button type="button" class="btn-ghost" id="appDialogCancel" data-i18n="cancel">Anuleaza</button>
+    <button type="button" class="btn-primary" id="appDialogConfirm" data-i18n="confirm">Confirma</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+/* Image Compressor · TekiDeki - translations (ro, en, sr-Latn, sr-Cyrl)
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright 2026 Kristian Mario Miskovic (TekiDeki)
+ * The key set must stay identical in all four locales (checked by the test suite).
+ */
+const I18N = {
+  ro: {
+    app_title: "Compresor de imagini",
+    app_subtitle: "Mai mic, aceeasi poza. Nimic nu pleaca din browser.",
+    skip_to_content: "Sari la continut",
+    lang_label: "Limba",
+    theme_toggle: "Tema deschisa sau inchisa",
+    tab_compress: "Compresie",
+    tab_about: "Despre",
+    tabs_label: "Sectiuni",
+    drop_title: "Trage pozele aici",
+    drop_hint: "Poti alege mai multe fisiere deodata, sau lipi o captura de ecran cu Ctrl+V. Totul se proceseaza local.",
+    choose_images: "Alege imagini",
+    drop_paste_hint: "Fisierele nu sunt incarcate nicaieri: raman in memoria acestei pagini pana inchizi fila.",
+    settings_title: "Setari de compresie",
+    quality_label: "Calitate",
+    quality_hint: "Calitate mai mica inseamna fisiere mai mici. 70-80 este de obicei invizibil pentru ochi.",
+    quality_png_note: "PNG nu are control de calitate: se redimensioneaza, dar calitatea nu se aplica.",
+    width_label: "Latime maxima",
+    width_original: "Pastreaza dimensiunea originala",
+    width_hint: "Pozele mai mici decat aceasta latime nu sunt marite niciodata.",
+    format_label: "Format de iesire",
+    format_auto: "Automat (pastreaza formatul)",
+    format_hint: "JPEG si WebP sunt cele mai mici pentru fotografii. PNG este potrivit pentru capturi de ecran si pentru transparenta.",
+    format_badge_auto: "Automat",
+    format_badge_webp_missing: "WebP indisponibil in acest browser",
+    process_start: "Proceseaza",
+    process_cancel: "Anuleaza",
+    download_all: "Descarca tot (ZIP)",
+    clear_list: "Goleste lista",
+    process_running: "{done} din {total} fisiere procesate",
+    process_done: "{n} fisiere procesate",
+    process_cancelled: "Procesare anulata. Rezultatele de pana acum sunt pastrate.",
+    progress_label: "Progres",
+    total_label: "Total",
+    list_title: "Fisiere",
+    list_empty: "Lista este goala.",
+    list_empty_hint: "Adauga poze mai sus, apoi apasa Proceseaza.",
+    list_count: "{n} fisiere in lista",
+    settings_stale: "Setarile s-au schimbat: apasa Proceseaza pentru rezultate noi.",
+    files_selected: "{n} fisiere adaugate.",
+    files_limit: "Se proceseaza maximum {max} de fisiere odata; restul au fost ignorate.",
+    file_too_large: "{name} este prea mare (maximum {max}).",
+    status_pending: "In asteptare",
+    status_working: "Se proceseaza",
+    status_done: "Gata",
+    status_error: "Eroare",
+    status_cancelled: "Anulat",
+    saving_badge: "cu {p}% mai mic",
+    bigger_warning: "Rezultatul este mai mare decat originalul",
+    gif_note: "GIF animat: se foloseste primul cadru",
+    download_one: "Descarca",
+    preview_show: "Compara",
+    retry_one: "Reincearca",
+    remove_one: "Scoate",
+    error_decode: "{name} nu a putut fi citit ca imagine.",
+    error_unsupported: "{name} are un format pe care acest browser nu il poate citi.",
+    error_encode: "{name} nu a putut fi scris in formatul ales.",
+    nothing_to_download: "Nu exista inca rezultate de descarcat.",
+    zip_too_large: "Rezultatele au {size} in total. Descarca fisier cu fisier peste {max}, sau reduce lotul.",
+    zip_ready: "ZIP pregatit cu {n} imagini.",
+    toast_cleared: "Lista a fost golita.",
+    toast_settings_reset: "Setarile au revenit la valorile initiale.",
+    toast_downloaded: "Descarcare pornita.",
+    preview_title: "Comparatie",
+    preview_original: "Original",
+    preview_compressed: "Comprimat",
+    preview_original_alt: "Imaginea originala",
+    preview_compressed_alt: "Imaginea comprimata",
+    preview_caption: "{dims} · {size}",
+    preview_meta_title: "Metadate",
+    meta_none: "Nu au fost gasite metadate in acest fisier.",
+    meta_found: "Metadate gasite: {list}.",
+    meta_device: "dispozitiv",
+    meta_date: "data capturii",
+    meta_gps: "coordonate GPS",
+    meta_orientation: "orientare EXIF {n}",
+    meta_cleaned: "Metadatele nu sunt copiate in fisierul nou: imaginea iese fara EXIF, fara GPS si fara date despre dispozitiv.",
+    confirm_clear_title: "Golesti lista?",
+    confirm_clear_body: "Se scot toate fisierele si rezultatele din pagina. Fisierele originale de pe disc nu sunt atinse.",
+    confirm_remove_title: "Scoate fisierul?",
+    confirm_remove_body: "Se scoate {name} din lista.",
+    about_what: "Ce face aplicatia",
+    about_what_text: "Comprima si redimensioneaza poze in lot, direct in browser, si le descarca la loc sau pe toate intr-un ZIP. Arata pentru fiecare fisier cat era inainte, cat este dupa si cat s-a economisit.",
+    about_privacy: "Confidentialitate",
+    about_privacy_text: "Fara cont, fara reclame, fara urmarire, fara server. Imaginile sunt citite din memoria paginii si nu sunt trimise nicaieri; poti verifica acest lucru in fila Retea a browserului sau in suita de teste a proiectului.",
+    about_metadata: "Metadate eliminate",
+    about_metadata_text: "Re-encodarea prin canvas nu copiaza EXIF, GPS, modelul aparatului sau data capturii. Orientarea EXIF este insa aplicata inainte de scriere, ca pozele facute cu telefonul vertical sa nu se intoarca.",
+    about_formats: "Formate si limite",
+    about_formats_1: "Iesire in JPEG, WebP sau PNG, doar in formatele pe care browserul le poate scrie efectiv.",
+    about_formats_2: "Maximum 60 de fisiere in lista si 40 MB per fisier.",
+    about_formats_3: "HEIC depinde de browser: Safari pe Apple il poate citi, restul primesc un mesaj clar. AVIF nu poate fi scris din canvas, deci nu este oferit.",
+    about_formats_4: "Imaginile animate (GIF) sunt tratate ca o singura imagine, primul cadru.",
+    about_install: "Instalare",
+    about_install_text: "Aplicatia este o PWA: dupa prima vizita online functioneaza si offline, iar pe telefon sau desktop poate fi instalata ca o aplicatie normala.",
+    install_button: "Instaleaza aplicatia",
+    install_unavailable: "Instalarea nu este disponibila in acest browser momentan.",
+    install_ios_hint: "Pe iPhone sau iPad: deschide in Safari, apoi Distribuie - Adauga la ecranul principal.",
+    about_shortcuts: "Scurtaturi",
+    about_shortcuts_text: "Space porneste procesarea, 1 si 2 schimba taburile, Ctrl+V adauga o imagine din clipboard.",
+    about_license: "Licenta",
+    about_license_text: "Cod propriu sub licenta Apache-2.0, fara biblioteci externe incluse. Proiectul foloseste doar API-uri ale browserului: Canvas, Blob, File API si Web Crypto acolo unde este nevoie.",
+    storage_title: "Setari si date locale",
+    storage_text: "Setarile de compresie sunt pastrate in acest browser, ca sa nu le alegi din nou. Nu pleaca nicaieri si pot fi resetate oricand.",
+    action_reset_settings: "Reseteaza setarile",
+    banner_memory: "Browserul blocheaza stocarea locala, deci setarile sunt pastrate doar pentru aceasta sesiune.",
+    banner_unreadable: "Setarile salvate nu au putut fi citite. Se folosesc valorile initiale.",
+    disclaimer: "Aplicatia nu incarca nimic pe internet si nu modifica fisierele originale de pe disc. Verifica rezultatele inainte de a sterge originalele.",
+    footer_attr_label: "Biblioteci externe",
+    footer_attr_text: "niciuna. Doar API-uri ale browserului.",
+    footer_source: "Cod sursa",
+    footer_license: "Apache-2.0",
+    donate_text: "Ti-a fost de folos? Poti sustine proiectul.",
+    donate_button: "Sustine proiectul",
+    donate_note: "Fara cont, fara reclame, fara urmarire.",
+    cancel: "Anuleaza",
+    confirm: "Confirma"
+  },
+
+  en: {
+    app_title: "Image Compressor",
+    app_subtitle: "Smaller files, same picture. Nothing leaves the browser.",
+    skip_to_content: "Skip to content",
+    lang_label: "Language",
+    theme_toggle: "Light or dark theme",
+    tab_compress: "Compress",
+    tab_about: "About",
+    tabs_label: "Sections",
+    drop_title: "Drop your pictures here",
+    drop_hint: "Pick several files at once, or paste a screenshot with Ctrl+V. Everything is processed locally.",
+    choose_images: "Choose images",
+    drop_paste_hint: "Files are never uploaded: they stay in this page's memory until you close the tab.",
+    settings_title: "Compression settings",
+    quality_label: "Quality",
+    quality_hint: "Lower quality means smaller files. 70-80 is usually invisible to the eye.",
+    quality_png_note: "PNG has no quality control: it is resized, but the quality slider does not apply.",
+    width_label: "Maximum width",
+    width_original: "Keep the original size",
+    width_hint: "Pictures smaller than this width are never enlarged.",
+    format_label: "Output format",
+    format_auto: "Automatic (keep the format)",
+    format_hint: "JPEG and WebP are the smallest for photographs. PNG suits screenshots and transparency.",
+    format_badge_auto: "Automatic",
+    format_badge_webp_missing: "WebP is not available in this browser",
+    process_start: "Process",
+    process_cancel: "Cancel",
+    download_all: "Download all (ZIP)",
+    clear_list: "Clear the list",
+    process_running: "{done} of {total} files processed",
+    process_done: "{n} files processed",
+    process_cancelled: "Processing cancelled. The results so far are kept.",
+    progress_label: "Progress",
+    total_label: "Total",
+    list_title: "Files",
+    list_empty: "The list is empty.",
+    list_empty_hint: "Add pictures above, then press Process.",
+    list_count: "{n} files in the list",
+    settings_stale: "Settings changed: press Process for fresh results.",
+    files_selected: "{n} files added.",
+    files_limit: "At most {max} files are processed at once; the rest were ignored.",
+    file_too_large: "{name} is too large (maximum {max}).",
+    status_pending: "Waiting",
+    status_working: "Working",
+    status_done: "Done",
+    status_error: "Error",
+    status_cancelled: "Cancelled",
+    saving_badge: "{p}% smaller",
+    bigger_warning: "The result is larger than the original",
+    gif_note: "Animated GIF: only the first frame is used",
+    download_one: "Download",
+    preview_show: "Compare",
+    retry_one: "Retry",
+    remove_one: "Remove",
+    error_decode: "{name} could not be read as an image.",
+    error_unsupported: "{name} uses a format this browser cannot read.",
+    error_encode: "{name} could not be written in the chosen format.",
+    nothing_to_download: "There are no results to download yet.",
+    zip_too_large: "The results total {size}. Download file by file above {max}, or use a smaller batch.",
+    zip_ready: "ZIP ready with {n} images.",
+    toast_cleared: "The list is empty now.",
+    toast_settings_reset: "Settings are back to their initial values.",
+    toast_downloaded: "Download started.",
+    preview_title: "Comparison",
+    preview_original: "Original",
+    preview_compressed: "Compressed",
+    preview_original_alt: "The original image",
+    preview_compressed_alt: "The compressed image",
+    preview_caption: "{dims} · {size}",
+    preview_meta_title: "Metadata",
+    meta_none: "No metadata was found in this file.",
+    meta_found: "Metadata found: {list}.",
+    meta_device: "device",
+    meta_date: "capture date",
+    meta_gps: "GPS coordinates",
+    meta_orientation: "EXIF orientation {n}",
+    meta_cleaned: "Metadata is not copied into the new file: the result has no EXIF, no GPS and no device details.",
+    confirm_clear_title: "Clear the list?",
+    confirm_clear_body: "Every file and result is removed from the page. The original files on disk are untouched.",
+    confirm_remove_title: "Remove this file?",
+    confirm_remove_body: "{name} is removed from the list.",
+    about_what: "What it does",
+    about_what_text: "Compresses and resizes pictures in batch, right in the browser, and downloads them one by one or all together in a ZIP. Every file shows its size before, its size after and what was saved.",
+    about_privacy: "Privacy",
+    about_privacy_text: "No account, no ads, no tracking, no server. Images are read from the page's memory and are never sent anywhere; you can confirm that in the browser's Network tab or in the project's test suite.",
+    about_metadata: "Metadata removal",
+    about_metadata_text: "Re-encoding through canvas does not copy EXIF, GPS, camera model or capture date. The EXIF orientation is applied first, so portrait photos do not end up sideways.",
+    about_formats: "Formats and limits",
+    about_formats_1: "JPEG, WebP or PNG output, restricted to the formats this browser can actually write.",
+    about_formats_2: "At most 60 files in the list and 40 MB per file.",
+    about_formats_3: "HEIC depends on the browser: Safari on Apple devices can read it, others get a clear message. AVIF cannot be written from canvas, so it is not offered.",
+    about_formats_4: "Animated images (GIF) are treated as a single picture, the first frame.",
+    about_install: "Install",
+    about_install_text: "This is a PWA: after the first online visit it also works offline, and on phones or desktops it can be installed like a normal app.",
+    install_button: "Install the app",
+    install_unavailable: "Installation is not available in this browser right now.",
+    install_ios_hint: "On iPhone or iPad: open in Safari, then Share - Add to Home Screen.",
+    about_shortcuts: "Shortcuts",
+    about_shortcuts_text: "Space starts processing, 1 and 2 switch tabs, Ctrl+V adds an image from the clipboard.",
+    about_license: "License",
+    about_license_text: "Own code under the Apache-2.0 license, with no third-party libraries bundled. The project only uses browser APIs: Canvas, Blob, File API and Web Crypto where needed.",
+    storage_title: "Settings and local data",
+    storage_text: "Compression settings are kept in this browser so you do not have to choose them again. They never leave the device and can be reset at any time.",
+    action_reset_settings: "Reset settings",
+    banner_memory: "The browser blocks local storage, so settings are kept for this session only.",
+    banner_unreadable: "The saved settings could not be read. Default values are being used.",
+    disclaimer: "The app uploads nothing and never changes the original files on disk. Check the results before deleting the originals.",
+    footer_attr_label: "Third-party libraries",
+    footer_attr_text: "none. Browser APIs only.",
+    footer_source: "Source code",
+    footer_license: "Apache-2.0",
+    donate_text: "Found it useful? You can support the project.",
+    donate_button: "Support the project",
+    donate_note: "No account, no ads, no tracking.",
+    cancel: "Cancel",
+    confirm: "Confirm"
+  },
+
+  'sr-latn': {
+    app_title: "Kompresor slika",
+    app_subtitle: "Manja datoteka, ista slika. Nista ne napusta pregledac.",
+    skip_to_content: "Preskoci na sadrzaj",
+    lang_label: "Jezik",
+    theme_toggle: "Svetla ili tamna tema",
+    tab_compress: "Kompresija",
+    tab_about: "O programu",
+    tabs_label: "Sekcije",
+    drop_title: "Prevuci slike ovde",
+    drop_hint: "Izaberi vise datoteka odjednom ili nalepi snimak ekrana sa Ctrl+V. Sve se obradjuje lokalno.",
+    choose_images: "Izaberi slike",
+    drop_paste_hint: "Datoteke se nigde ne otpremaju: ostaju u memoriji ove stranice dok ne zatvoris karticu.",
+    settings_title: "Podesavanja kompresije",
+    quality_label: "Kvalitet",
+    quality_hint: "Manji kvalitet znaci manje datoteke. 70-80 je obicno nevidljivo za oko.",
+    quality_png_note: "PNG nema kontrolu kvaliteta: menja se velicina, ali klizac kvaliteta se ne primenjuje.",
+    width_label: "Najveca sirina",
+    width_original: "Zadrzi originalnu velicinu",
+    width_hint: "Slike manje od ove sirine se nikada ne uvecavaju.",
+    format_label: "Izlazni format",
+    format_auto: "Automatski (zadrzi format)",
+    format_hint: "JPEG i WebP su najmanji za fotografije. PNG odgovara snimcima ekrana i providnosti.",
+    format_badge_auto: "Automatski",
+    format_badge_webp_missing: "WebP nije dostupan u ovom pregledacu",
+    process_start: "Obradi",
+    process_cancel: "Prekini",
+    download_all: "Preuzmi sve (ZIP)",
+    clear_list: "Isprazni listu",
+    process_running: "{done} od {total} datoteka obradjeno",
+    process_done: "{n} datoteka obradjeno",
+    process_cancelled: "Obrada prekinuta. Dosadasnji rezultati su sacuvani.",
+    progress_label: "Napredak",
+    total_label: "Ukupno",
+    list_title: "Datoteke",
+    list_empty: "Lista je prazna.",
+    list_empty_hint: "Dodaj slike iznad, pa pritisni Obradi.",
+    list_count: "{n} datoteka u listi",
+    settings_stale: "Podesavanja su promenjena: pritisni Obradi za nove rezultate.",
+    files_selected: "Dodato {n} datoteka.",
+    files_limit: "Obradjuje se najvise {max} datoteka odjednom; ostale su preskocene.",
+    file_too_large: "{name} je prevelika (najvise {max}).",
+    status_pending: "Na cekanju",
+    status_working: "Obradjuje se",
+    status_done: "Gotovo",
+    status_error: "Greska",
+    status_cancelled: "Prekinuto",
+    saving_badge: "{p}% manje",
+    bigger_warning: "Rezultat je veci od originala",
+    gif_note: "Animirani GIF: koristi se samo prvi kadar",
+    download_one: "Preuzmi",
+    preview_show: "Uporedi",
+    retry_one: "Pokusaj ponovo",
+    remove_one: "Ukloni",
+    error_decode: "{name} nije mogla biti procitana kao slika.",
+    error_unsupported: "{name} je u formatu koji ovaj pregledac ne moze da procita.",
+    error_encode: "{name} nije mogla biti zapisana u izabranom formatu.",
+    nothing_to_download: "Jos nema rezultata za preuzimanje.",
+    zip_too_large: "Rezultati zajedno imaju {size}. Preuzmi datoteku po datoteku iznad {max}, ili smanji listu.",
+    zip_ready: "ZIP je spreman sa {n} slika.",
+    toast_cleared: "Lista je ispraznjena.",
+    toast_settings_reset: "Podesavanja su vracena na pocetne vrednosti.",
+    toast_downloaded: "Preuzimanje je pocelo.",
+    preview_title: "Poredjenje",
+    preview_original: "Original",
+    preview_compressed: "Kompresovano",
+    preview_original_alt: "Originalna slika",
+    preview_compressed_alt: "Kompresovana slika",
+    preview_caption: "{dims} · {size}",
+    preview_meta_title: "Metapodaci",
+    meta_none: "U ovoj datoteci nisu nadjeni metapodaci.",
+    meta_found: "Nadjeni metapodaci: {list}.",
+    meta_device: "uredjaj",
+    meta_date: "datum snimanja",
+    meta_gps: "GPS koordinate",
+    meta_orientation: "EXIF orijentacija {n}",
+    meta_cleaned: "Metapodaci se ne prenose u novu datoteku: rezultat nema EXIF, ni GPS, ni podatke o uredjaju.",
+    confirm_clear_title: "Isprazniti listu?",
+    confirm_clear_body: "Sve datoteke i rezultati se uklanjaju sa stranice. Originali na disku ostaju nepromenjeni.",
+    confirm_remove_title: "Ukloniti datoteku?",
+    confirm_remove_body: "{name} se uklanja iz liste.",
+    about_what: "Sta aplikacija radi",
+    about_what_text: "Kompresuje i menja velicinu slika u paketu, direktno u pregledacu, i preuzima ih pojedinacno ili sve zajedno u ZIP. Za svaku datoteku prikazuje velicinu pre, velicinu posle i ustede.",
+    about_privacy: "Privatnost",
+    about_privacy_text: "Bez naloga, bez reklama, bez pracenja, bez servera. Slike se citaju iz memorije stranice i nikuda se ne salju; to mozes potvrditi u kartici Mreza u pregledacu ili u testovima projekta.",
+    about_metadata: "Uklanjanje metapodataka",
+    about_metadata_text: "Ponovno kodiranje kroz canvas ne prenosi EXIF, GPS, model uredjaja ni datum snimanja. EXIF orijentacija se primenjuje prvo, pa uspravne fotografije ne zavrse postrance.",
+    about_formats: "Formati i ogranicenja",
+    about_formats_1: "Izlaz u JPEG, WebP ili PNG, samo u formatima koje pregledac zaista moze da zapise.",
+    about_formats_2: "Najvise 60 datoteka u listi i 40 MB po datoteci.",
+    about_formats_3: "HEIC zavisi od pregledaca: Safari na Apple uredjajima ga cita, ostali dobijaju jasnu poruku. AVIF se ne moze zapisati iz canvasa, pa nije ponudjen.",
+    about_formats_4: "Animirane slike (GIF) se tretiraju kao jedna slika, prvi kadar.",
+    about_install: "Instalacija",
+    about_install_text: "Ovo je PWA: posle prve posete onlajn radi i oflajn, a na telefonu ili racunaru moze se instalirati kao obicna aplikacija.",
+    install_button: "Instaliraj aplikaciju",
+    install_unavailable: "Instalacija trenutno nije dostupna u ovom pregledacu.",
+    install_ios_hint: "Na iPhone ili iPad: otvori u Safariju, pa Podeli - Dodaj na pocetni ekran.",
+    about_shortcuts: "Precice",
+    about_shortcuts_text: "Space pokrece obradu, 1 i 2 menjaju kartice, Ctrl+V dodaje sliku iz ostave.",
+    about_license: "Licenca",
+    about_license_text: "Sopstveni kod pod licencom Apache-2.0, bez ukljucenih tudjih biblioteka. Projekat koristi samo API-je pregledaca: Canvas, Blob, File API i Web Crypto gde je potrebno.",
+    storage_title: "Podesavanja i lokalni podaci",
+    storage_text: "Podesavanja kompresije se cuvaju u ovom pregledacu da ih ne biras ponovo. Nigde ne odlaze i mogu se resetovati u svakom trenutku.",
+    action_reset_settings: "Resetuj podesavanja",
+    banner_memory: "Pregledac blokira lokalnu ostavu, pa se podesavanja cuvaju samo za ovu sesiju.",
+    banner_unreadable: "Sacuvana podesavanja nije bilo moguce procitati. Koriste se pocetne vrednosti.",
+    disclaimer: "Aplikacija nista ne otprema i ne menja originalne datoteke na disku. Proveri rezultate pre nego sto obrises originale.",
+    footer_attr_label: "Tudje biblioteke",
+    footer_attr_text: "nijedna. Samo API-ji pregledaca.",
+    footer_source: "Izvorni kod",
+    footer_license: "Apache-2.0",
+    donate_text: "Bilo je korisno? Mozes podrzati projekat.",
+    donate_button: "Podrzi projekat",
+    donate_note: "Bez naloga, bez reklama, bez pracenja.",
+    cancel: "Prekini",
+    confirm: "Potvrdi"
+  },
+
+  'sr-cyrl': {
+    app_title: "Компресор слика",
+    app_subtitle: "Мања датотека, иста слика. Ништа не напушта прегледач.",
+    skip_to_content: "Прескочи на садржај",
+    lang_label: "Језик",
+    theme_toggle: "Светла или тамна тема",
+    tab_compress: "Компресија",
+    tab_about: "О програму",
+    tabs_label: "Секције",
+    drop_title: "Превуци слике овде",
+    drop_hint: "Изабери више датотека одједном или налепи снимак екрана са Ctrl+V. Све се обрађује локално.",
+    choose_images: "Изабери слике",
+    drop_paste_hint: "Датотеке се нигде не отпремају: остају у меморији ове странице док не затвориш картицу.",
+    settings_title: "Подешавања компресије",
+    quality_label: "Квалитет",
+    quality_hint: "Мањи квалитет значи мање датотеке. 70-80 је обично невидљиво за око.",
+    quality_png_note: "PNG нема контролу квалитета: мења се величина, али клизач квалитета се не примењује.",
+    width_label: "Највећа ширина",
+    width_original: "Задржи оригиналну величину",
+    width_hint: "Слике мање од ове ширине се никада не увећавају.",
+    format_label: "Излазни формат",
+    format_auto: "Аутоматски (задржи формат)",
+    format_hint: "JPEG и WebP су најмањи за фотографије. PNG одговара снимцима екрана и провидности.",
+    format_badge_auto: "Аутоматски",
+    format_badge_webp_missing: "WebP није доступан у овом прегледачу",
+    process_start: "Обради",
+    process_cancel: "Прекини",
+    download_all: "Преузми све (ZIP)",
+    clear_list: "Испразни листу",
+    process_running: "{done} од {total} датотека обрађено",
+    process_done: "{n} датотека обрађено",
+    process_cancelled: "Обрада прекинута. Досадашњи резултати су сачувани.",
+    progress_label: "Напредак",
+    total_label: "Укупно",
+    list_title: "Датотеке",
+    list_empty: "Листа је празна.",
+    list_empty_hint: "Додај слике изнад, па притисни Обради.",
+    list_count: "{n} датотека у листи",
+    settings_stale: "Подешавања су промењена: притисни Обради за нове резултате.",
+    files_selected: "Додато {n} датотека.",
+    files_limit: "Обрађује се највише {max} датотека одједном; остале су прескочене.",
+    file_too_large: "{name} је превелика (највише {max}).",
+    status_pending: "На чекању",
+    status_working: "Обрађује се",
+    status_done: "Готово",
+    status_error: "Грешка",
+    status_cancelled: "Прекинуто",
+    saving_badge: "{p}% мање",
+    bigger_warning: "Резултат је већи од оригинала",
+    gif_note: "Анимирани GIF: користи се само први кадар",
+    download_one: "Преузми",
+    preview_show: "Упореди",
+    retry_one: "Покушај поново",
+    remove_one: "Уклони",
+    error_decode: "{name} није могла бити прочитана као слика.",
+    error_unsupported: "{name} је у формату који овај прегледач не може да прочита.",
+    error_encode: "{name} није могла бити записана у изабраном формату.",
+    nothing_to_download: "Још нема резултата за преузимање.",
+    zip_too_large: "Резултати заједно имају {size}. Преузми датотеку по датотеку изнад {max}, или смањи листу.",
+    zip_ready: "ZIP је спреман са {n} слика.",
+    toast_cleared: "Листа је испражњена.",
+    toast_settings_reset: "Подешавања су враћена на почетне вредности.",
+    toast_downloaded: "Преузимање је почело.",
+    preview_title: "Поређење",
+    preview_original: "Оригинал",
+    preview_compressed: "Компресовано",
+    preview_original_alt: "Оригинална слика",
+    preview_compressed_alt: "Компресована слика",
+    preview_caption: "{dims} · {size}",
+    preview_meta_title: "Метаподаци",
+    meta_none: "У овој датотеци нису нађени метаподаци.",
+    meta_found: "Нађени метаподаци: {list}.",
+    meta_device: "уређај",
+    meta_date: "датум снимања",
+    meta_gps: "GPS координате",
+    meta_orientation: "EXIF оријентација {n}",
+    meta_cleaned: "Метаподаци се не преносе у нову датотеку: резултат нема EXIF, ни GPS, ни податке о уређају.",
+    confirm_clear_title: "Испразнити листу?",
+    confirm_clear_body: "Све датотеке и резултати се уклањају са странице. Оригинали на диску остају непромењени.",
+    confirm_remove_title: "Уклонити датотеку?",
+    confirm_remove_body: "{name} се уклања из листе.",
+    about_what: "Шта апликација ради",
+    about_what_text: "Компресује и мења величину слика у пакету, директно у прегледачу, и преузима их појединачно или све заједно у ZIP. За сваку датотеку приказује величину пре, величину после и уштеде.",
+    about_privacy: "Приватност",
+    about_privacy_text: "Без налога, без реклама, без праћења, без сервера. Слике се читају из меморије странице и никуда се не шаљу; то можеш потврдити у картици Мрежа у прегледачу или у тестовима пројекта.",
+    about_metadata: "Уклањање метаподатака",
+    about_metadata_text: "Поновно кодирање кроз canvas не преноси EXIF, GPS, модел уређаја ни датум снимања. EXIF оријентација се примењује прво, па усправне фотографије не заврше постранаце.",
+    about_formats: "Формати и ограничења",
+    about_formats_1: "Излаз у JPEG, WebP или PNG, само у форматима које прегледач заиста може да запише.",
+    about_formats_2: "Највише 60 датотека у листи и 40 MB по датотеци.",
+    about_formats_3: "HEIC зависи од прегледача: Safari на Apple уређајима га чита, остали добијају јасну поруку. AVIF се не може записати из canvasa, па није понуђен.",
+    about_formats_4: "Анимиране слике (GIF) се третирају као једна слика, први кадар.",
+    about_install: "Инсталација",
+    about_install_text: "Ово је PWA: после прве посете онлајн ради и офлајн, а на телефону или рачунару може се инсталирати као обична апликација.",
+    install_button: "Инсталирај апликацију",
+    install_unavailable: "Инсталација тренутно није доступна у овом прегледачу.",
+    install_ios_hint: "На iPhone или iPad: отвори у Safariju, па Подели - Додај на почетни екран.",
+    about_shortcuts: "Пречице",
+    about_shortcuts_text: "Space покреће обраду, 1 и 2 мењају картице, Ctrl+V додаје слику из оставе.",
+    about_license: "Лиценца",
+    about_license_text: "Сопствени код под лиценцом Apache-2.0, без укључених туђих библиотека. Пројекат користи само API-је прегледача: Canvas, Blob, File API и Web Crypto где је потребно.",
+    storage_title: "Подешавања и локални подаци",
+    storage_text: "Подешавања компресије се чувају у овом прегледачу да их не бираш поново. Нигде не одлазе и могу се ресетовати у сваком тренутку.",
+    action_reset_settings: "Ресетуј подешавања",
+    banner_memory: "Прегледач блокира локалну оставу, па се подешавања чувају само за ову сесију.",
+    banner_unreadable: "Сачувана подешавања није било могуће прочитати. Користе се почетне вредности.",
+    disclaimer: "Апликација ништа не отпрема и не мења оригиналне датотеке на диску. Провери резултате пре него што обришеш оригинале.",
+    footer_attr_label: "Туђе библиотеке",
+    footer_attr_text: "ниједна. Само API-ји прегледача.",
+    footer_source: "Изворни код",
+    footer_license: "Apache-2.0",
+    donate_text: "Било је корисно? Можеш подржати пројекат.",
+    donate_button: "Подржи пројекат",
+    donate_note: "Без налога, без реклама, без праћења.",
+    cancel: "Прекини",
+    confirm: "Потврди"
+  }
+};
+
+const LOCALES = { ro: 'ro-RO', en: 'en-GB', 'sr-latn': 'sr-Latn-RS', 'sr-cyrl': 'sr-Cyrl-RS' };
+const HTML_LANGS = { ro: 'ro', en: 'en', 'sr-latn': 'sr-Latn', 'sr-cyrl': 'sr-Cyrl' };
+/* Image Compressor · TekiDeki - application logic (no third-party code)
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright 2026 Kristian Mario Miskovic (TekiDeki)
+ *
+ * Pipeline: File API -> createImageBitmap (with an EXIF orientation matrix we
+ * control) -> canvas -> toBlob -> Blob download or a store-only ZIP written here.
+ * Nothing ever leaves the page.
+ */
+(function () {
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  function el(tag, options) {
+    const node = document.createElement(tag);
+    const opts = options || {};
+    if (opts.class) node.className = opts.class;
+    if (opts.text !== undefined) node.textContent = opts.text;
+    if (opts.attrs) for (const [k, v] of Object.entries(opts.attrs)) node.setAttribute(k, v);
+    if (opts.on) for (const [k, v] of Object.entries(opts.on)) node.addEventListener(k, v);
+    return node;
+  }
+
+  // ---------- i18n ----------
+  let currentLang = 'ro';
+  function t(key, vars) {
+    const table = (typeof I18N !== 'undefined' && I18N[currentLang]) || {};
+    const fallback = (typeof I18N !== 'undefined' && I18N.en) || {};
+    let text = table[key] !== undefined ? table[key] : (fallback[key] !== undefined ? fallback[key] : key);
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) text = text.split('{' + k + '}').join(String(v));
+    }
+    return text;
+  }
+  const locale = () => LOCALES[currentLang] || 'en-GB';
+  const fmtCount = n => new Intl.NumberFormat(locale(), { maximumFractionDigits: 1 }).format(Number(n) || 0);
+  function fmtBytes(bytes) {
+    const value = Number(bytes) || 0;
+    if (value < 1024) return fmtCount(value) + ' B';
+    if (value < 1024 * 1024) return fmtCount(Math.round(value / 1024)) + ' KB';
+    return fmtCount(Math.round(value / (1024 * 1024) * 10) / 10) + ' MB';
+  }
+  const fmtPercent = n => new Intl.NumberFormat(locale(), { maximumFractionDigits: 0 }).format(n) + '%';
+
+  // ---------- storage (works, memory-only, or unreadable) ----------
+  const KEYS = { settings: 'image_compressor_settings_v1' };
+  const DEFAULT_SETTINGS = { quality: 78, maxWidth: 1600, format: 'auto', dark: null, lang: null };
+  const memory = {};
+  let storageWorks = true;
+  let dataState = 'ok';                      // ok | memory | unreadable
+  try {
+    localStorage.setItem('__img_probe__', '1');
+    localStorage.removeItem('__img_probe__');
+  } catch (e) { storageWorks = false; }
+  function storeGet(key) {
+    if (!storageWorks) return memory[key] !== undefined ? memory[key] : null;
+    try { return localStorage.getItem(key); } catch (e) { return null; }
+  }
+  function storeSet(key, value) {
+    if (!storageWorks) { memory[key] = value; dataState = 'memory'; return false; }
+    try { localStorage.setItem(key, value); return true; } catch (e) { memory[key] = value; dataState = 'memory'; return false; }
+  }
+  let settings = Object.assign({}, DEFAULT_SETTINGS);
+  function loadSettings() {
+    const raw = storeGet(KEYS.settings);
+    if (raw === null || raw === '') { dataState = storageWorks ? 'ok' : 'memory'; return; }
+    let parsed = null;
+    try { parsed = JSON.parse(raw); } catch (e) { parsed = null; }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) { dataState = 'unreadable'; return; }
+    const quality = Number(parsed.quality);
+    const maxWidth = Number(parsed.maxWidth);
+    settings = {
+      quality: Number.isFinite(quality) ? Math.min(95, Math.max(40, Math.round(quality))) : DEFAULT_SETTINGS.quality,
+      maxWidth: Number.isFinite(maxWidth) && maxWidth >= 0 ? Math.min(8000, Math.round(maxWidth)) : DEFAULT_SETTINGS.maxWidth,
+      format: ['auto', 'jpeg', 'webp', 'png'].includes(parsed.format) ? parsed.format : 'auto',
+      dark: typeof parsed.dark === 'boolean' ? parsed.dark : null,
+      lang: I18N[parsed.lang] ? parsed.lang : null,
+    };
+    dataState = storageWorks ? 'ok' : 'memory';
+  }
+  function saveSettings() {
+    let ok = storeSet(KEYS.settings, JSON.stringify(settings));
+    if (ok) dataState = 'ok';
+    refreshBanner();
+  }
+
+  // ---------- capabilities ----------
+  const WEBP_SUPPORTED = (function () {
+    try {
+      const probe = document.createElement('canvas');
+      probe.width = probe.height = 1;
+      return probe.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+    } catch (e) { return false; }
+  })();
+
+  // ---------- EXIF (only what we display and act on) ----------
+  const EXIF_TAG_ORIENTATION = 0x0112;
+  const EXIF_TAG_MAKE = 0x010f;
+  const EXIF_TAG_MODEL = 0x0110;
+  const EXIF_TAG_EXIF_IFD = 0x8769;
+  const EXIF_TAG_DATETIME_ORIGINAL = 0x9003;
+  const EXIF_TAG_GPS_IFD = 0x8825;
+
+  /* An 8x4 JPEG tagged with orientation 6, kept here as base64. Decoding it
+   * shows whether this browser hands out already-rotated pixels (most do) or
+   * raw ones, so the orientation transform is applied exactly once. */
+  const ORIENTATION_PROBE_B64 = '/9j/4QAiRXhpZgAATU0AKgAAAAgAAQESAAMAAAABAAYAAAAAAAD/2wBDABQODxIPDRQSEBIXFRQYHjIhHhwcHj0sLiQySUBMS0dARkVQWnNiUFVtVkVGZIhlbXd7gYKBTmCNl4x9lnN+gXz/2wBDARUXFx4aHjshITt8U0ZTfHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHz/wAARCAAEAAgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDMooorkPoD/9k=';
+  let platformUpright = null;
+  function probeImage() {
+    const binary = atob(ORIENTATION_PROBE_B64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Blob([bytes], { type: 'image/jpeg' });
+  }
+  async function platformAppliesOrientation() {
+    if (platformUpright !== null) return platformUpright;
+    platformUpright = false;
+    if (typeof createImageBitmap === 'function') {
+      try {
+        const bitmap = await createImageBitmap(probeImage());
+        platformUpright = bitmap.height > bitmap.width;
+        if (bitmap.close) bitmap.close();
+      } catch (e) { platformUpright = false; }
+    }
+    return platformUpright;
+  }
+
+  /* Reads the EXIF block and the stored pixel size of a JPEG. The stored size
+   * matters because it is the only way to tell whether a decoder already
+   * rotated the pixels before we saw them. */
+  async function readJpegInfo(file) {
+    const looksJpeg = /^image\/jpe?g$/i.test(file.type || '') || /\.jpe?g$/i.test(file.name || '');
+    if (!looksJpeg) return null;
+    let buffer;
+    try { buffer = await file.slice(0, 262144).arrayBuffer(); } catch (e) { return null; }
+    const view = new DataView(buffer);
+    if (view.byteLength < 4 || view.getUint16(0, false) !== 0xffd8) return null;
+    const info = { hasExif: false, orientation: 1, make: '', model: '', dateTime: '', gps: false, storedWidth: 0, storedHeight: 0 };
+    let offset = 2;
+    while (offset + 4 < view.byteLength) {
+      if (view.getUint8(offset) !== 0xff) { offset++; continue; }
+      const marker = view.getUint8(offset + 1);
+      if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { offset += 2; continue; }
+      if (marker === 0xda) break;                                    // image data starts here
+      const size = view.getUint16(offset + 2, false);
+      if (size < 2) break;
+      if (marker === 0xe1 && !info.hasExif) {
+        const start = offset + 4;
+        if (start + 6 <= view.byteLength && view.getUint32(start, false) === 0x45786966) {
+          const parsed = parseTiff(view, start + 6);
+          if (parsed) Object.assign(info, parsed, { hasExif: true });
+        }
+      }
+      const isSof = marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
+      if (isSof && offset + 9 <= view.byteLength) {
+        info.storedHeight = view.getUint16(offset + 5, false);
+        info.storedWidth = view.getUint16(offset + 7, false);
+      }
+      offset += 2 + size;
+    }
+    return info;
+  }
+
+  function parseTiff(view, base) {
+    if (base + 8 > view.byteLength) return null;
+    const endian = view.getUint16(base, false);
+    const little = endian === 0x4949;
+    if (!little && endian !== 0x4d4d) return null;
+    const readU16 = offset => view.getUint16(offset, little);
+    const readU32 = offset => view.getUint32(offset, little);
+    if (readU16(base + 2) !== 0x002a) return null;
+    const ifd0 = base + readU32(base + 4);
+    const out = { orientation: 1, make: '', model: '', dateTime: '', gps: false };
+    const readIfd = (ifdOffset, wanted) => {
+      if (ifdOffset + 2 > view.byteLength) return {};
+      const count = readU16(ifdOffset);
+      const values = {};
+      for (let i = 0; i < count; i++) {
+        const entry = ifdOffset + 2 + i * 12;
+        if (entry + 12 > view.byteLength) break;
+        const tag = readU16(entry);
+        if (!wanted.includes(tag)) continue;
+        const type = readU16(entry + 2);
+        const num = readU32(entry + 4);
+        const valueOffset = entry + 8;
+        if (type === 3) {                                     // SHORT
+          values[tag] = readU16(valueOffset);
+        } else if (type === 2) {                              // ASCII
+          const size = num;
+          const strOffset = size > 4 ? base + readU32(valueOffset) : valueOffset;
+          if (strOffset + size <= view.byteLength) {
+            let text = '';
+            for (let c = 0; c < size && view.getUint8(strOffset + c) !== 0; c++) text += String.fromCharCode(view.getUint8(strOffset + c));
+            values[tag] = text.trim();
+          }
+        } else if (type === 4) {                              // LONG, a pointer
+          values[tag] = readU32(valueOffset);
+        }
+      }
+      return values;
+    };
+    const ifd0Values = readIfd(ifd0, [EXIF_TAG_ORIENTATION, EXIF_TAG_MAKE, EXIF_TAG_MODEL, EXIF_TAG_EXIF_IFD, EXIF_TAG_GPS_IFD]);
+    if (ifd0Values[EXIF_TAG_ORIENTATION]) out.orientation = ifd0Values[EXIF_TAG_ORIENTATION];
+    if (ifd0Values[EXIF_TAG_MAKE]) out.make = ifd0Values[EXIF_TAG_MAKE];
+    if (ifd0Values[EXIF_TAG_MODEL]) out.model = ifd0Values[EXIF_TAG_MODEL];
+    if (ifd0Values[EXIF_TAG_GPS_IFD]) out.gps = true;
+    if (ifd0Values[EXIF_TAG_EXIF_IFD]) {
+      const exifValues = readIfd(base + ifd0Values[EXIF_TAG_EXIF_IFD], [EXIF_TAG_DATETIME_ORIGINAL]);
+      if (exifValues[EXIF_TAG_DATETIME_ORIGINAL]) out.dateTime = exifValues[EXIF_TAG_DATETIME_ORIGINAL];
+    }
+    return out;
+  }
+
+  /* Decides whether the pixels we hold still need the EXIF rotation. When the
+   * stored size is known it is compared with the decoded size, which answers
+   * the question directly; for square images and unknown sources the platform
+   * probe is the only signal available. */
+  function effectiveOrientation(orientation, width, height, info, sourceUpright) {
+    if (!orientation || orientation < 2) return 1;
+    if (info && info.storedWidth && info.storedHeight) {
+      const same = width === info.storedWidth && height === info.storedHeight;
+      const swapped = width === info.storedHeight && height === info.storedWidth;
+      if (same !== swapped) return same ? orientation : 1;
+    }
+    return sourceUpright ? 1 : orientation;
+  }
+
+  // ---------- decode / draw / encode ----------
+  async function loadBitmap(file) {
+    if (typeof createImageBitmap === 'function') {
+      const upright = await platformAppliesOrientation();
+      try {
+        const bitmap = await createImageBitmap(file);
+        return { source: bitmap, width: bitmap.width, height: bitmap.height, upright, close: () => bitmap.close && bitmap.close() };
+      } catch (e) { /* fall through to the <img> path */ }
+    }
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => resolve({
+        source: img,
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+        upright: true,                                   // <img> decoders rotate EXIF images themselves
+        close: () => URL.revokeObjectURL(url),
+      });
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('decode')); };
+      img.src = url;
+    });
+  }
+
+  const orientedDims = (width, height, orientation) => (orientation >= 5 && orientation <= 8) ? [height, width] : [width, height];
+
+  /* Builds the draw matrix for one EXIF orientation, already scaled by s.
+   * Everything is expressed in source pixels so the result lands exactly inside
+   * a canvas of outW x outH (see the table in the README notes). */
+  function orientationMatrix(orientation, s, sw, sh) {
+    switch (orientation) {
+      case 2: return [-s, 0, 0, s, s * sw, 0];
+      case 3: return [-s, 0, 0, -s, s * sw, s * sh];
+      case 4: return [s, 0, 0, -s, 0, s * sh];
+      case 5: return [0, s, s, 0, 0, 0];
+      case 6: return [0, s, -s, 0, s * sh, 0];
+      case 7: return [0, -s, -s, 0, s * sh, s * sw];
+      case 8: return [0, -s, s, 0, 0, s * sw];
+      default: return [s, 0, 0, s, 0, 0];
+    }
+  }
+
+  function toBlob(canvas, mime, quality) {
+    return new Promise(resolve => {
+      try {
+        canvas.toBlob(blob => resolve(blob || null), mime, quality);
+      } catch (e) { resolve(null); }
+    });
+  }
+
+  const MIME = { jpeg: 'image/jpeg', webp: 'image/webp', png: 'image/png' };
+  const FORMAT_LABEL = { jpeg: 'JPEG', webp: 'WebP', png: 'PNG' };
+  const EXT = { jpeg: 'jpg', webp: 'webp', png: 'png' };
+
+  function resolvedFormat(file) {
+    if (settings.format !== 'auto') {
+      if (settings.format === 'webp' && !WEBP_SUPPORTED) return 'jpeg';
+      return settings.format;
+    }
+    const type = (file.type || '').toLowerCase();
+    if (type === 'image/png') return 'png';
+    if (type === 'image/webp' && WEBP_SUPPORTED) return 'webp';
+    return 'jpeg';
+  }
+  function outputName(name, ext) {
+    const base = String(name || 'image').replace(/\.[^./\\]+$/, '');
+    return base + '-compact.' + ext;
+  }
+
+  // ---------- state ----------
+  const MAX_FILES = 60;
+  const MAX_FILE_BYTES = 40 * 1024 * 1024;
+  const ZIP_MAX_BYTES = 300 * 1024 * 1024;
+  let items = [];
+  let processing = false;
+  let cancelRequested = false;
+  let stale = false;
+  let selectedId = null;
+  let previewOriginalUrl = null;
+  let itemSeq = 0;
+
+  const itemById = id => items.find(item => item.id === id);
+  const doneItems = () => items.filter(item => item.status === 'done' && item.outBlob);
+
+  // ---------- list handling ----------
+  function addFiles(fileList) {
+    const incoming = Array.from(fileList || []);
+    if (!incoming.length) return;
+    let limitHit = false;
+    let queued = 0;
+    for (const file of incoming) {
+      if (items.length >= MAX_FILES) { limitHit = true; break; }
+      const id = ++itemSeq;
+      const name = file.name || ('image-' + id);
+      const item = {
+        id, file, name, size: file.size, status: 'pending', retryable: true,
+        outBlob: null, outUrl: null, outSize: 0, outWidth: 0, outHeight: 0, displayW: 0, displayH: 0,
+        outName: '', meta: null, error: '',
+        gif: (file.type || '').toLowerCase() === 'image/gif' || /\.gif$/i.test(name),
+      };
+      const imageType = /^image\//i.test(file.type || '');
+      if (!imageType && !/\.(jpe?g|png|webp|gif|bmp|avif|heic|heif)$/i.test(name)) {
+        item.status = 'error';
+        item.retryable = false;
+        item.error = t('error_unsupported', { name });
+      } else if (file.size > MAX_FILE_BYTES) {
+        item.status = 'error';
+        item.retryable = false;
+        item.error = t('file_too_large', { name, max: fmtBytes(MAX_FILE_BYTES) });
+      } else {
+        queued++;
+      }
+      items.push(item);
+    }
+    const note = $('fileNote');
+    if (limitHit) {
+      note.textContent = t('files_limit', { max: fmtCount(MAX_FILES) });
+      note.hidden = false;
+    } else if (queued > 0) {
+      note.textContent = t('files_selected', { n: fmtCount(queued) });
+      note.hidden = false;
+    }
+    renderList();
+    refreshControls();
+  }
+
+  function removeItem(id) {
+    const item = itemById(id);
+    if (!item) return;
+    if (item.outUrl) URL.revokeObjectURL(item.outUrl);
+    items = items.filter(entry => entry.id !== id);
+    if (selectedId === id) {
+      selectedId = null;
+      $('previewCard').hidden = true;
+      if (previewOriginalUrl) { URL.revokeObjectURL(previewOriginalUrl); previewOriginalUrl = null; }
+    }
+    renderList();
+    refreshControls();
+    updateSummary();
+  }
+
+  function clearAll() {
+    for (const item of items) if (item.outUrl) URL.revokeObjectURL(item.outUrl);
+    items = [];
+    selectedId = null;
+    stale = false;
+    if (previewOriginalUrl) { URL.revokeObjectURL(previewOriginalUrl); previewOriginalUrl = null; }
+    $('previewCard').hidden = true;
+    $('fileNote').hidden = true;
+    $('staleNote').hidden = true;
+    renderList();
+    refreshControls();
+    updateSummary();
+    toast(t('toast_cleared'));
+  }
+
+  function statusBadge(item) {
+    const map = {
+      pending: ['badge', 'status_pending'],
+      working: ['badge badge-info', 'status_working'],
+      done: ['badge badge-pos', 'status_done'],
+      error: ['badge badge-danger', 'status_error'],
+      cancelled: ['badge badge-warn', 'status_cancelled'],
+    };
+    const [cls, key] = map[item.status] || map.pending;
+    return el('span', { class: cls, text: t(key) });
+  }
+
+  function renderList() {
+    const list = $('fileList');
+    list.textContent = '';
+    const count = $('listCount');
+    count.textContent = t('list_count', { n: fmtCount(items.length) });
+    count.hidden = items.length === 0;
+    $('listEmpty').hidden = items.length > 0;
+    $('listEmptyHint').hidden = items.length > 0;
+    $('staleNote').hidden = !(stale && doneItems().length);
+    for (const item of items) {
+      const row = el('li', { class: 'list-item' + (item.id === selectedId ? ' is-selected' : '') });
+      const main = el('div', { class: 'list-main' });
+      main.appendChild(el('div', { class: 'list-name', text: item.outName || item.name }));
+      const meta = el('div', { class: 'list-meta' });
+      meta.appendChild(statusBadge(item));
+      if (item.status === 'done') {
+        meta.appendChild(el('span', { class: 'small muted', text: fmtBytes(item.size) + ' -> ' + fmtBytes(item.outSize) }));
+        const pct = item.size > 0 ? Math.round((1 - item.outSize / item.size) * 100) : 0;
+        if (pct > 0) meta.appendChild(el('span', { class: 'badge badge-pos', text: t('saving_badge', { p: fmtCount(pct) }) }));
+        else meta.appendChild(el('span', { class: 'badge badge-warn', text: t('bigger_warning') }));
+        if (item.outWidth) meta.appendChild(el('span', { class: 'small muted', text: item.outWidth + ' x ' + item.outHeight + ' px' }));
+        if (item.format) meta.appendChild(el('span', { class: 'small muted', text: FORMAT_LABEL[item.format] || item.format }));
+      } else if (item.status === 'error') {
+        meta.appendChild(el('span', { class: 'small', text: item.error }));
+      }
+      if (item.gif) meta.appendChild(el('span', { class: 'badge badge-warn', text: t('gif_note') }));
+      main.appendChild(meta);
+      row.appendChild(main);
+
+      const actions = el('div', { class: 'list-actions' });
+      if (item.status === 'done') {
+        actions.appendChild(el('button', {
+          class: 'btn-ghost btn-sm', text: t('preview_show'), attrs: { type: 'button', 'data-action': 'preview', 'data-id': item.id, 'aria-label': t('preview_show') + ': ' + item.name },
+        }));
+        actions.appendChild(el('button', {
+          class: 'btn-primary btn-sm', text: t('download_one'), attrs: { type: 'button', 'data-action': 'download', 'data-id': item.id, 'aria-label': t('download_one') + ': ' + item.outName },
+        }));
+      } else if (item.status === 'error' && item.retryable !== false) {
+        actions.appendChild(el('button', {
+          class: 'btn-ghost btn-sm', text: t('retry_one'), attrs: { type: 'button', 'data-action': 'retry', 'data-id': item.id, 'aria-label': t('retry_one') + ': ' + item.name },
+        }));
+      }
+      actions.appendChild(el('button', {
+        class: 'btn-ghost btn-sm', text: t('remove_one'), attrs: { type: 'button', 'data-action': 'remove', 'data-id': item.id, 'aria-label': t('remove_one') + ': ' + item.name },
+      }));
+      row.appendChild(actions);
+      list.appendChild(row);
+    }
+  }
+
+  function updateSummary() {
+    const summary = $('summary');
+    const done = doneItems();
+    if (!done.length) { summary.hidden = true; return; }
+    const before = done.reduce((sum, item) => sum + item.size, 0);
+    const after = done.reduce((sum, item) => sum + item.outSize, 0);
+    const saved = before > 0 ? Math.round((1 - after / before) * 100) : 0;
+    $('totalFiles').textContent = done.length + ' / ' + items.length;
+    $('totalBefore').textContent = fmtBytes(before);
+    $('totalAfter').textContent = fmtBytes(after);
+    const badge = $('totalSaved');
+    badge.className = 'badge ' + (saved >= 0 ? 'badge-pos' : 'badge-warn');
+    badge.textContent = t('saving_badge', { p: fmtCount(saved) });
+    summary.hidden = false;
+  }
+
+  function refreshControls() {
+    const hasItems = items.length > 0;
+    const done = doneItems();
+    const runnable = items.some(item => item.status === 'pending' || (item.status === 'error' && item.retryable !== false) || (stale && item.status === 'done'));
+    $('processBtn').disabled = processing || !runnable;
+    $('cancelBtn').hidden = !processing;
+    $('downloadAllBtn').disabled = processing || done.length === 0;
+    $('clearListBtn').disabled = processing || !hasItems;
+  }
+
+  function setProgress(done, total) {
+    const wrap = $('progressWrap');
+    const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+    wrap.hidden = total === 0;
+    wrap.setAttribute('aria-valuenow', String(percent));
+    $('progressBar').style.width = percent + '%';
+    const text = $('progressText');
+    text.hidden = total === 0;
+    text.textContent = t('process_running', { done: fmtCount(done), total: fmtCount(total) });
+    $('progressLive').textContent = t('process_running', { done: fmtCount(done), total: fmtCount(total) });
+  }
+
+  // ---------- processing ----------
+  const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+
+  async function processItem(item) {
+    item.status = 'working';
+    item.error = '';
+    renderList();
+    try {
+      const decoded = await loadBitmap(item.file);
+      const meta = await readJpegInfo(item.file);
+      item.meta = meta;
+      const orientation = meta && meta.orientation ? meta.orientation : 1;
+      const rotation = effectiveOrientation(orientation, decoded.width, decoded.height, meta, decoded.upright);
+      const [displayW, displayH] = orientedDims(decoded.width, decoded.height, rotation);
+      const scale = settings.maxWidth > 0 ? Math.min(1, settings.maxWidth / displayW) : 1;
+      const outW = Math.max(1, Math.round(displayW * scale));
+      const outH = Math.max(1, Math.round(displayH * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = outW;
+      canvas.height = outH;
+      const ctx = canvas.getContext('2d');
+      const format = resolvedFormat(item.file);
+      if (format === 'jpeg') {                        // transparency becomes white, not black
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, outW, outH);
+      }
+      const matrix = orientationMatrix(rotation, scale, decoded.width, decoded.height);
+      ctx.setTransform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(decoded.source, 0, 0);
+      if (decoded.close) decoded.close();
+      const blob = await toBlob(canvas, MIME[format], settings.quality / 100);
+      canvas.width = canvas.height = 0;
+      if (!blob) throw new Error('encode');
+      if (item.outUrl) URL.revokeObjectURL(item.outUrl);
+      item.outBlob = blob;
+      item.outSize = blob.size;
+      item.outWidth = outW;
+      item.outHeight = outH;
+      item.displayW = displayW;
+      item.displayH = displayH;
+      item.outName = outputName(item.name, EXT[format]);
+      item.format = format;
+      item.status = 'done';
+      return null;
+    } catch (error) {
+      item.status = 'error';
+      const decoded = /decode/i.test(String(error && error.message));
+      const unsupported = /unsupported|not supported|heif|heic/i.test(String(error && error.message));
+      item.error = (unsupported || decoded) ? t('error_decode', { name: item.name }) : t('error_encode', { name: item.name });
+      return item.error;
+    }
+  }
+
+  async function processAll() {
+    if (processing) return;
+    const queue = items.filter(item => item.status === 'pending' || (item.status === 'error' && item.retryable !== false) || (stale && item.status === 'done'));
+    if (!queue.length) return;
+    processing = true;
+    cancelRequested = false;
+    const wasStale = stale;
+    stale = false;
+    $('staleNote').hidden = true;
+    refreshControls();
+    let done = 0;
+    setProgress(0, queue.length);
+    for (const item of queue) {
+      if (cancelRequested) {
+        if (item.status === 'working') item.status = 'pending';
+        break;
+      }
+      await processItem(item);
+      done++;
+      setProgress(done, queue.length);
+      renderList();
+      updateSummary();
+      await tick();
+    }
+    processing = false;
+    const cancelled = cancelRequested;
+    cancelRequested = false;
+    if (cancelled) {
+      for (const item of items) if (item.status === 'working') item.status = 'pending';
+      toast(t('process_cancelled'));
+      setProgress(0, 0);
+    } else {
+      toast(t('process_done', { n: fmtCount(done) }));
+      setProgress(items.length, items.length);
+      if (wasStale) renderList();
+    }
+    renderList();
+    refreshControls();
+    updateSummary();
+  }
+
+  // ---------- downloads ----------
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+
+  function downloadOne(id) {
+    const item = itemById(id);
+    if (!item || !item.outBlob) return;
+    triggerDownload(item.outBlob, item.outName || item.name);
+    toast(t('toast_downloaded'));
+  }
+
+  // --- a store-only ZIP (CRC32, no compression, no dependency) ---
+  let crcTable = null;
+  function crc32(bytes) {
+    if (!crcTable) {
+      crcTable = new Uint32Array(256);
+      for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        crcTable[n] = c >>> 0;
+      }
+    }
+    let crc = 0xffffffff;
+    for (let i = 0; i < bytes.length; i++) crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  function dosDateTime(date) {
+    const time = ((date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2)) & 0xffff;
+    const day = (((date.getFullYear() - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate()) & 0xffff;
+    return { time, day };
+  }
+
+  function buildZip(entries) {
+    const encoder = new TextEncoder();
+    const stamp = dosDateTime(new Date());
+    const chunks = [];
+    const central = [];
+    let offset = 0;
+    for (const entry of entries) {
+      const nameBytes = encoder.encode(entry.name);
+      const data = new Uint8Array(entry.bytes);
+      const crc = crc32(data);
+      const header = new DataView(new ArrayBuffer(30));
+      header.setUint32(0, 0x04034b50, true);
+      header.setUint16(4, 20, true);
+      header.setUint16(6, 0x0800, true);              // UTF-8 names
+      header.setUint16(8, 0, true);                   // method 0 = stored
+      header.setUint16(10, stamp.time, true);
+      header.setUint16(12, stamp.day, true);
+      header.setUint32(14, crc, true);
+      header.setUint32(18, data.length, true);
+      header.setUint32(22, data.length, true);
+      header.setUint16(26, nameBytes.length, true);
+      header.setUint16(28, 0, true);
+      chunks.push(new Uint8Array(header.buffer), nameBytes, data);
+      const centralHeader = new DataView(new ArrayBuffer(46));
+      centralHeader.setUint32(0, 0x02014b50, true);
+      centralHeader.setUint16(4, 20, true);
+      centralHeader.setUint16(6, 20, true);
+      centralHeader.setUint16(8, 0x0800, true);
+      centralHeader.setUint16(10, 0, true);
+      centralHeader.setUint16(12, stamp.time, true);
+      centralHeader.setUint16(14, stamp.day, true);
+      centralHeader.setUint32(16, crc, true);
+      centralHeader.setUint32(20, data.length, true);
+      centralHeader.setUint32(24, data.length, true);
+      centralHeader.setUint16(28, nameBytes.length, true);
+      centralHeader.setUint32(42, offset, true);
+      central.push(new Uint8Array(centralHeader.buffer), nameBytes);
+      offset += 30 + nameBytes.length + data.length;
+    }
+    const centralSize = central.reduce((sum, chunk) => sum + chunk.length, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true);
+    end.setUint16(8, entries.length, true);
+    end.setUint16(10, entries.length, true);
+    end.setUint32(12, centralSize, true);
+    end.setUint32(16, offset, true);
+    return new Blob(chunks.concat(central, [new Uint8Array(end.buffer)]), { type: 'application/zip' });
+  }
+
+  async function downloadAllZip() {
+    const done = doneItems();
+    if (!done.length) { toast(t('nothing_to_download')); return; }
+    const totalBytes = done.reduce((sum, item) => sum + item.outSize, 0);
+    if (totalBytes > ZIP_MAX_BYTES) {
+      toast(t('zip_too_large', { size: fmtBytes(totalBytes), max: fmtBytes(ZIP_MAX_BYTES) }));
+      return;
+    }
+    const used = new Set();
+    const entries = [];
+    for (const item of done) {
+      let name = item.outName || outputName(item.name, 'jpg');
+      if (used.has(name)) {
+        const dot = name.lastIndexOf('.');
+        const base = dot > 0 ? name.slice(0, dot) : name;
+        const ext = dot > 0 ? name.slice(dot) : '';
+        let counter = 2;
+        while (used.has(base + '-' + counter + ext)) counter++;
+        name = base + '-' + counter + ext;
+      }
+      used.add(name);
+      entries.push({ name, bytes: await item.outBlob.arrayBuffer() });
+    }
+    const zip = buildZip(entries);
+    triggerDownload(zip, 'compressed-images-' + new Date().toISOString().slice(0, 10) + '.zip');
+    toast(t('zip_ready', { n: fmtCount(entries.length) }));
+  }
+
+  // ---------- preview ----------
+  function metaSummary(meta) {
+    if (!meta || !meta.hasExif) return [t('meta_none')];
+    const found = [];
+    if (meta.make || meta.model) found.push(t('meta_device') + (meta.model ? ' (' + meta.model + ')' : ''));
+    if (meta.dateTime) found.push(t('meta_date') + ' (' + meta.dateTime + ')');
+    if (meta.gps) found.push(t('meta_gps'));
+    if (meta.orientation && meta.orientation > 1) found.push(t('meta_orientation', { n: meta.orientation }));
+    return found.length ? [t('meta_found', { list: found.join(', ') })] : [t('meta_none')];
+  }
+
+  function showPreview(id) {
+    const item = itemById(id);
+    if (!item || item.status !== 'done' || !item.outBlob) return;
+    selectedId = id;
+    if (previewOriginalUrl) { URL.revokeObjectURL(previewOriginalUrl); previewOriginalUrl = null; }
+    previewOriginalUrl = URL.createObjectURL(item.file);
+    if (item.outUrl) URL.revokeObjectURL(item.outUrl);
+    item.outUrl = URL.createObjectURL(item.outBlob);
+    $('previewOriginal').src = previewOriginalUrl;
+    $('previewCompressed').src = item.outUrl;
+    const displayW = item.displayW || item.outWidth;
+    const displayH = item.displayH || item.outHeight;
+    $('previewOriginalCaption').textContent = t('preview_caption', { dims: displayW + ' x ' + displayH + ' px', size: fmtBytes(item.size) });
+    $('previewCompressedCaption').textContent = t('preview_caption', { dims: item.outWidth + ' x ' + item.outHeight + ' px', size: fmtBytes(item.outSize) });
+    const meta = $('previewMeta');
+    meta.textContent = '';
+    for (const line of metaSummary(item.meta)) meta.appendChild(el('li', { text: line }));
+    meta.appendChild(el('li', { class: 'small muted', text: t('meta_cleaned') }));
+    $('previewCard').hidden = false;
+    renderList();
+  }
+
+  // ---------- banner / toast / dialog ----------
+  let bannerActions = [];
+  function setBanner(kind, text, actions) {
+    const banner = $('statusBanner');
+    if (!text) { banner.hidden = true; $('statusText').textContent = ''; $('statusActions').textContent = ''; bannerActions = []; return; }
+    banner.className = 'status-banner' + (kind ? ' ' + kind : '');
+    $('statusText').textContent = text;
+    $('statusActions').textContent = '';
+    bannerActions = actions || [];
+    bannerActions.forEach((action, index) => {
+      $('statusActions').appendChild(el('button', {
+        class: index === 0 ? 'btn-primary btn-sm' : 'btn-ghost btn-sm',
+        text: action.label, attrs: { type: 'button', 'data-banner-action': String(index) },
+      }));
+    });
+    banner.hidden = false;
+  }
+  function refreshBanner() {
+    if (dataState === 'memory') { setBanner('info', t('banner_memory'), []); return; }
+    if (dataState === 'unreadable') { setBanner('warn', t('banner_unreadable'), [{ label: t('action_reset_settings'), run: resetSettings }]); return; }
+    setBanner(null, '');
+  }
+  let toastTimer = null;
+  function toast(message) {
+    const node = $('toast');
+    node.textContent = message;
+    node.hidden = false;
+    node.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      node.classList.remove('show');
+      setTimeout(() => { node.hidden = true; }, 250);
+    }, 2800);
+  }
+  function askConfirm(title, body, confirmLabel) {
+    return new Promise(resolve => {
+      const dialog = $('appDialog');
+      $('appDialogTitle').textContent = title;
+      $('appDialogBody').textContent = body;
+      $('appDialogConfirm').textContent = confirmLabel || t('confirm');
+      const finish = value => {
+        dialog.close();
+        $('appDialogConfirm').removeEventListener('click', onConfirm);
+        $('appDialogCancel').removeEventListener('click', onCancel);
+        dialog.removeEventListener('cancel', onCancelEvent);
+        resolve(value);
+      };
+      const onConfirm = () => finish(true);
+      const onCancel = () => finish(false);
+      const onCancelEvent = event => { event.preventDefault(); finish(false); };
+      $('appDialogConfirm').addEventListener('click', onConfirm);
+      $('appDialogCancel').addEventListener('click', onCancel);
+      dialog.addEventListener('cancel', onCancelEvent);
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+      else dialog.setAttribute('open', '');
+    });
+  }
+
+  // ---------- settings UI ----------
+  function syncSettingsUi() {
+    $('qualityRange').value = String(settings.quality);
+    $('qualityOut').textContent = settings.quality + '%';
+    $('widthSelect').value = String(settings.maxWidth);
+    $('formatSelect').value = settings.format;
+    $('pngNote').hidden = settings.format !== 'png';
+    const badge = $('formatBadge');
+    const labels = { auto: t('format_badge_auto'), jpeg: 'JPEG', webp: 'WebP', png: 'PNG' };
+    badge.textContent = labels[settings.format] || '';
+    badge.hidden = false;
+    const webpOption = $('formatSelect').querySelector('option[value="webp"]');
+    if (webpOption) {
+      webpOption.disabled = !WEBP_SUPPORTED;
+      if (!WEBP_SUPPORTED) webpOption.textContent = 'WebP (' + t('format_badge_webp_missing') + ')';
+    }
+  }
+  function markStale() {
+    if (doneItems().length) { stale = true; $('staleNote').hidden = false; }
+    refreshControls();
+  }
+  function resetSettings() {
+    settings = Object.assign({}, DEFAULT_SETTINGS);
+    dataState = storageWorks ? 'ok' : 'memory';
+    try { if (storageWorks) localStorage.removeItem(KEYS.settings); } catch (e) { memory[KEYS.settings] = undefined; }
+    syncSettingsUi();
+    applyTheme(detectDark());
+    markStale();
+    refreshBanner();
+    toast(t('toast_settings_reset'));
+  }
+
+  // ---------- theme / language ----------
+  function detectDark() {
+    if (settings.dark !== null) return settings.dark;
+    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+  function applyTheme(dark) {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', dark ? '#0f172a' : '#f4f6f9');
+    const toggle = $('themeToggle');
+    toggle.textContent = dark ? '☀️' : '🌙';
+    toggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    toggle.setAttribute('aria-label', t('theme_toggle'));
+    toggle.title = t('theme_toggle');
+  }
+  function applyLanguage(lang, persist) {
+    currentLang = I18N[lang] ? lang : 'en';
+    if (persist) { settings.lang = currentLang; saveSettings(); }
+    document.documentElement.lang = HTML_LANGS[currentLang] || currentLang;
+    for (const node of document.querySelectorAll('[data-i18n]')) node.textContent = t(node.getAttribute('data-i18n'));
+    for (const node of document.querySelectorAll('[data-i18n-aria]')) node.setAttribute('aria-label', t(node.getAttribute('data-i18n-aria')));
+    for (const node of document.querySelectorAll('[data-i18n-alt]')) node.setAttribute('alt', t(node.getAttribute('data-i18n-alt')));
+    document.title = t('app_title') + ' - TekiDeki';
+    const description = document.querySelector('meta[name="description"]');
+    if (description) description.setAttribute('content', t('app_subtitle') + ' ' + t('about_metadata_text'));
+    const select = $('langSelect');
+    select.value = currentLang;
+    select.setAttribute('aria-label', t('lang_label'));
+    syncSettingsUi();
+    $('progressWrap').setAttribute('aria-label', t('progress_label'));
+    renderList();
+    refreshControls();
+    updateSummary();
+    if (selectedId && itemById(selectedId)) showPreview(selectedId);
+  }
+
+  // ---------- tabs ----------
+  function switchTab(name) {
+    for (const button of document.querySelectorAll('[role="tab"]')) {
+      const selected = button.dataset.tab === name;
+      button.setAttribute('aria-selected', selected ? 'true' : 'false');
+      button.tabIndex = selected ? 0 : -1;
+    }
+    for (const panel of document.querySelectorAll('[role="tabpanel"]')) panel.hidden = panel.id !== 'panel-' + name;
+  }
+
+  // ---------- install ----------
+  let deferredInstall = null;
+  function installApp() {
+    if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; $('installBtn').hidden = true; return; }
+    const ua = navigator.userAgent || '';
+    if (/iPad|iPhone|iPod/.test(ua)) toast(t('install_ios_hint'));
+    else toast(t('install_unavailable'));
+  }
+
+  // ---------- wiring ----------
+  function init() {
+    loadSettings();
+    const params = new URLSearchParams(location.search);
+    const requested = (params.get('lang') || '').toLowerCase();
+    let lang = 'ro';
+    if (I18N[requested]) lang = requested;
+    else if (settings.lang && I18N[settings.lang]) lang = settings.lang;
+    else {
+      const nav = (navigator.language || 'en').toLowerCase();
+      if (nav.startsWith('ro')) lang = 'ro';
+      else if (nav.startsWith('sr')) lang = /cyrl|cyrillic/.test(nav) ? 'sr-cyrl' : 'sr-latn';
+      else lang = 'en';
+    }
+    applyTheme(detectDark());
+    applyLanguage(lang, false);
+    syncSettingsUi();
+    refreshBanner();
+    renderList();
+    refreshControls();
+    updateSummary();
+
+    const requestedTab = (params.get('tab') || '').toLowerCase();
+    if (requestedTab === 'compress' || requestedTab === 'about') switchTab(requestedTab);
+
+    for (const button of document.querySelectorAll('[role="tab"]')) {
+      button.addEventListener('click', () => switchTab(button.dataset.tab));
+    }
+    const tablist = document.querySelector('[role="tablist"]');
+    if (tablist) {
+      tablist.addEventListener('keydown', event => {
+        const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
+        const index = tabs.indexOf(document.activeElement);
+        if (index === -1) return;
+        let next = null;
+        if (event.key === 'ArrowRight') next = tabs[(index + 1) % tabs.length];
+        else if (event.key === 'ArrowLeft') next = tabs[(index - 1 + tabs.length) % tabs.length];
+        else if (event.key === 'Home') next = tabs[0];
+        else if (event.key === 'End') next = tabs[tabs.length - 1];
+        if (next) { event.preventDefault(); switchTab(next.dataset.tab); next.focus(); }
+      });
+    }
+
+    $('chooseImages').addEventListener('click', () => $('fileInput').click());
+    $('fileInput').addEventListener('change', event => {
+      addFiles(event.target.files);
+      event.target.value = '';
+    });
+    const dropZone = $('dropZone');
+    for (const type of ['dragenter', 'dragover']) {
+      dropZone.addEventListener(type, event => { event.preventDefault(); dropZone.classList.add('dragover'); });
+    }
+    for (const type of ['dragleave', 'dragend']) {
+      dropZone.addEventListener(type, () => dropZone.classList.remove('dragover'));
+    }
+    dropZone.addEventListener('drop', event => {
+      event.preventDefault();
+      dropZone.classList.remove('dragover');
+      addFiles(event.dataTransfer && event.dataTransfer.files);
+    });
+    window.addEventListener('dragover', event => event.preventDefault());
+    window.addEventListener('drop', event => event.preventDefault());
+    document.addEventListener('paste', event => {
+      const clipboard = event.clipboardData;
+      if (!clipboard) return;
+      let files = clipboard.files;
+      if ((!files || !files.length) && clipboard.items) {
+        const picked = [];
+        for (const entry of clipboard.items) if (entry.kind === 'file') { const file = entry.getAsFile(); if (file) picked.push(file); }
+        if (picked.length) files = picked;
+      }
+      if (files && files.length) { event.preventDefault(); addFiles(files); }
+    });
+
+    $('qualityRange').addEventListener('input', event => {
+      settings.quality = Number(event.target.value);
+      $('qualityOut').textContent = settings.quality + '%';
+      saveSettings();
+      markStale();
+    });
+    $('widthSelect').addEventListener('change', event => {
+      settings.maxWidth = Number(event.target.value) || 0;
+      saveSettings();
+      syncSettingsUi();
+      markStale();
+    });
+    $('formatSelect').addEventListener('change', event => {
+      settings.format = event.target.value;
+      saveSettings();
+      syncSettingsUi();
+      markStale();
+    });
+    $('processBtn').addEventListener('click', processAll);
+    $('cancelBtn').addEventListener('click', () => { if (processing) { cancelRequested = true; toast(t('process_cancelled')); } });
+    $('downloadAllBtn').addEventListener('click', downloadAllZip);
+    $('clearListBtn').addEventListener('click', async () => {
+      const confirmed = await askConfirm(t('confirm_clear_title'), t('confirm_clear_body'), t('clear_list'));
+      if (confirmed) clearAll();
+    });
+    $('fileList').addEventListener('click', async event => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const id = Number(button.dataset.id);
+      const item = itemById(id);
+      if (!item) return;
+      if (button.dataset.action === 'preview') showPreview(id);
+      else if (button.dataset.action === 'download') downloadOne(id);
+      else if (button.dataset.action === 'retry') { item.status = 'pending'; item.error = ''; renderList(); refreshControls(); processAll(); }
+      else if (button.dataset.action === 'remove') {
+        const confirmed = await askConfirm(t('confirm_remove_title'), t('confirm_remove_body', { name: item.name }), t('remove_one'));
+        if (confirmed) removeItem(id);
+      }
+    });
+    $('themeToggle').addEventListener('click', () => {
+      settings.dark = document.documentElement.getAttribute('data-theme') !== 'dark';
+      saveSettings();
+      applyTheme(settings.dark);
+    });
+    $('langSelect').addEventListener('change', event => applyLanguage(event.target.value, true));
+    $('statusActions').addEventListener('click', event => {
+      const button = event.target.closest('button[data-banner-action]');
+      if (!button) return;
+      const action = bannerActions[Number(button.dataset.bannerAction)];
+      if (action && typeof action.run === 'function') action.run();
+    });
+    $('resetSettings').addEventListener('click', resetSettings);
+    $('installBtn').addEventListener('click', installApp);
+
+    document.addEventListener('keydown', event => {
+      const target = event.target;
+      const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT');
+      const interactive = target && target.closest && target.closest('button, a, [role="tab"], [role="switch"], [contenteditable="true"]');
+      if (typing || interactive) return;
+      if (event.code === 'Space') {
+        const canRun = !processing && items.some(item => item.status === 'pending' || (item.status === 'error' && item.retryable !== false) || (stale && item.status === 'done'));
+        if (canRun) { event.preventDefault(); processAll(); }
+      }
+      else if (event.key === '1') switchTab('compress');
+      else if (event.key === '2') switchTab('about');
+    });
+
+    window.addEventListener('beforeinstallprompt', event => {
+      event.preventDefault();
+      deferredInstall = event;
+    });
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => { /* offline support is optional */ }));
+    }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+</body>
+</html>

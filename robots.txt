@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://tekideki.github.io/Image-Compressor/sitemap.xml
