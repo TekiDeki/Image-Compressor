@@ -3,7 +3,7 @@
   "name": "Image Compressor · TekiDeki",
   "short_name": "Compressor",
   "description": "Batch image compression, resizing and metadata cleaning in the browser. Nothing is uploaded, EXIF and GPS are stripped, works offline.",
-  "lang": "ro",
+  "lang": "en",
   "dir": "ltr",
   "start_url": "./",
   "scope": "./",
@@ -14,7 +14,7 @@
   ],
   "orientation": "any",
   "background_color": "#f4f6f9",
-  "theme_color": "#2563eb",
+  "theme_color": "#f4f6f9",
   "categories": [
     "utilities",
     "productivity",
