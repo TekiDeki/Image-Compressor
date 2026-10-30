@@ -384,6 +384,15 @@ dialog#appDialog p { color: var(--text-soft); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+
+
+  /* regula casei: tinte de atingere pe mobil */
+  @media (pointer: coarse), (max-width: 700px) {
+    #qualityRange { min-height: 34px; display: inline-flex; align-items: center; }
+    a:not(:where(p, li, figcaption) a) { min-height: 34px; display: inline-flex; align-items: center; }
+    .support-link { min-height: 34px; display: inline-flex; align-items: center; }
+  }
 </style>
 </head>
 <body>
