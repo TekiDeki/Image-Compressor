@@ -863,15 +863,6 @@
     for (const panel of document.querySelectorAll('[role="tabpanel"]')) panel.hidden = panel.id !== 'panel-' + name;
   }
 
-  // ---------- install ----------
-  let deferredInstall = null;
-  function installApp() {
-    if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; $('installBtn').hidden = true; return; }
-    const ua = navigator.userAgent || '';
-    if (/iPad|iPhone|iPod/.test(ua)) toast(t('install_ios_hint'));
-    else toast(t('install_unavailable'));
-  }
-
   // ---------- wiring ----------
   function init() {
     loadSettings();
@@ -998,7 +989,6 @@
       if (action && typeof action.run === 'function') action.run();
     });
     $('resetSettings').addEventListener('click', resetSettings);
-    $('installBtn').addEventListener('click', installApp);
 
     document.addEventListener('keydown', event => {
       const target = event.target;
@@ -1013,10 +1003,6 @@
       else if (event.key === '2') switchTab('about');
     });
 
-    window.addEventListener('beforeinstallprompt', event => {
-      event.preventDefault();
-      deferredInstall = event;
-    });
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => { /* offline support is optional */ }));
     }
